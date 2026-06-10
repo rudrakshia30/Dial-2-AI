@@ -1,0 +1,72 @@
+[
+  {
+    "name": "PM-Kisan Samman Nidhi",
+    "keywords": ["pm kisan", "kisan", "6000"],
+    "description_hindi": "Pradhan Mantri Kisan Samman Nidhi yojana ke tahat kisan parivar ko pratyek varsh arthik sahayata di jaati hai.",
+    "eligibility_hindi": "Chote aur seemant kisan parivar.",
+    "benefit_hindi": "Prati varsh 6000 rupaye 3 kiston mein."
+  },
+  {
+    "name": "Ayushman Bharat",
+    "keywords": ["ayushman", "health", "hospital"],
+    "description_hindi": "Garib parivaron ko swasthya bima suraksha pradan karti hai.",
+    "eligibility_hindi": "SECC data mein shamil parivar.",
+    "benefit_hindi": "5 lakh rupaye tak cashless treatment."
+  },
+  {
+    "name": "PM Fasal Bima Yojana",
+    "keywords": ["bima", "crop insurance", "fasal"],
+    "description_hindi": "Fasal nuksan ke khilaf suraksha pradan karti hai.",
+    "eligibility_hindi": "Sabhi kisan jo fasal ugate hain.",
+    "benefit_hindi": "Prakritik aapda se hue nuksan ka bima."
+  },
+  {
+    "name": "Kisan Credit Card",
+    "keywords": ["kcc", "credit card", "loan"],
+    "description_hindi": "Kisano ko sasta rin uplabdh karata hai.",
+    "eligibility_hindi": "Yogya kisan aur dairy/poultry palak.",
+    "benefit_hindi": "Kam byaj dar par loan."
+  },
+  {
+    "name": "PM Krishi Sinchai Yojana",
+    "keywords": ["sinchai", "irrigation", "water"],
+    "description_hindi": "Har khet ko pani pahunchane ka lakshya.",
+    "eligibility_hindi": "Krishi bhoomi wale kisan.",
+    "benefit_hindi": "Sinchai suvidha aur subsidy."
+  },
+  {
+    "name": "e-NAM",
+    "keywords": ["enam", "market", "mandi"],
+    "description_hindi": "Rashtriya krishi bazaar platform.",
+    "eligibility_hindi": "Registered farmers and traders.",
+    "benefit_hindi": "Behtar bazaar aur daam."
+  },
+  {
+    "name": "Soil Health Card",
+    "keywords": ["soil", "mitti", "health card"],
+    "description_hindi": "Mitti ki gunvatta ki jankari pradan karta hai.",
+    "eligibility_hindi": "Sabhi kisan.",
+    "benefit_hindi": "Behtar khaad aur upaj nirnay."
+  },
+  {
+    "name": "PMGSY",
+    "keywords": ["road", "sadak", "pmgsy"],
+    "description_hindi": "Gramin sadak connectivity sudharne ki yojana.",
+    "eligibility_hindi": "Gramin kshetra.",
+    "benefit_hindi": "Sadak suvidha."
+  },
+  {
+    "name": "PMAY-G",
+    "keywords": ["housing", "ghar", "awas"],
+    "description_hindi": "Gramin ghar nirmaan sahayata.",
+    "eligibility_hindi": "Yogya gramin parivar.",
+    "benefit_hindi": "Ghar nirmaan ke liye arthik sahayata."
+  },
+  {
+    "name": "MGNREGS",
+    "keywords": ["mnrega", "employment", "rojgar"],
+    "description_hindi": "Gramin rojgar ki guarantee yojana.",
+    "eligibility_hindi": "Gramin parivar ke vyask sadasya.",
+    "benefit_hindi": "100 din tak rojgar."
+  }
+]
