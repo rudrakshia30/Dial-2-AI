@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+google-genai
+redis
+httpx
+python-dotenv
+aiofiles
+python-multipart
+SpeechRecognition
+gTTS
