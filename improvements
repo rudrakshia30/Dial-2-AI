@@ -2,7 +2,16 @@ grok
 more api keys- railway,mandi,
 readme uction 
 answer currently only in hindi . 
-frontend 
 response time decrease
 Automatic language detection during the call
 whatsapp - low priority
+
+
+
+frontend-
+Total and average call duration
+Frequently asked topics
+Language distribution
+Successful versus failed queries
+API failure rates
+Average AI response time
