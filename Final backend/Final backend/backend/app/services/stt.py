@@ -1,28 +1,33 @@
-import speech_recognition as sr
+import os
+
 import httpx
-from app.services.llm import client
-from google.genai import types
+import speech_recognition as sr
+from dotenv import load_dotenv
+
+load_dotenv()
+
+XAI_STT_URL = "https://api.x.ai/v1/stt"
+
+
+def _xai_stt_headers():
+    return {"Authorization": f"Bearer {os.getenv('XAI_API_KEY')}"}
+
 
 def transcribe_wav(wav_path):
     try:
         with open(wav_path, "rb") as f:
-            audio_bytes = f.read()
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                types.Part.from_bytes(
-                    data=audio_bytes,
-                    mime_type="audio/wav"
-                ),
-                "Transcribe this audio call recording. Return only the transcription, in the original language (Hindi/English/Hinglish) spoken. Do not include any other text."
-            ]
-        )
-        text = response.text.strip()
-        print(f"Gemini STT: '{text}'")
+            response = httpx.post(
+                XAI_STT_URL,
+                headers=_xai_stt_headers(),
+                files={"file": ("audio.wav", f, "audio/wav")},
+                timeout=60.0,
+            )
+        response.raise_for_status()
+        text = response.json().get("text", "").strip()
+        print(f"Grok STT: '{text}'")
         return text
     except Exception as e:
-        print("Gemini STT ERROR:", repr(e))
+        print("Grok STT ERROR:", repr(e))
         # Fallback to speech_recognition
         try:
             r = sr.Recognizer()
@@ -41,32 +46,19 @@ async def transcribe_audio(audio_url):
     if not audio_url:
         return ""
     try:
-        # Download audio from URL
         async with httpx.AsyncClient() as http_client:
-            response = await http_client.get(audio_url, timeout=30.0)
+            response = await http_client.post(
+                XAI_STT_URL,
+                headers=_xai_stt_headers(),
+                data={"url": audio_url},
+                timeout=60.0,
+            )
             if response.status_code != 200:
-                print(f"Failed to download audio: status {response.status_code}")
+                print(f"Grok STT failed: status {response.status_code}")
                 return ""
-            audio_bytes = response.content
-
-        # Determine MIME type based on URL or defaults to wav
-        mime_type = "audio/wav"
-        if "mp3" in audio_url.lower():
-            mime_type = "audio/mp3"
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                types.Part.from_bytes(
-                    data=audio_bytes,
-                    mime_type=mime_type
-                ),
-                "Transcribe this audio call recording. Return only the transcription, in the original language (Hindi/English/Hinglish) spoken. Do not include any other text."
-            ]
-        )
-        text = response.text.strip()
-        print(f"Gemini URL STT: '{text}'")
-        return text
+            text = response.json().get("text", "").strip()
+            print(f"Grok URL STT: '{text}'")
+            return text
     except Exception as e:
-        print("Gemini URL STT ERROR:", repr(e))
+        print("Grok URL STT ERROR:", repr(e))
         return ""
