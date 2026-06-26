@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-XAI_STT_URL = "https://api.x.ai/v1/stt"
+XAI_STT_URL = "https://api.groq.com/openai/v1/stt"
 
 
 def _xai_stt_headers():
-    return {"Authorization": f"Bearer {os.getenv('XAI_API_KEY')}"}
+    return {"Authorization": f"Bearer {os.getenv('GROQ_API_KEY  ')}"}
 
 
 def transcribe_wav(wav_path):
