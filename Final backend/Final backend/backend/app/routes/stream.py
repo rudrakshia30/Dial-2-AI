@@ -11,10 +11,20 @@ from app.services.stt import transcribe_wav
 from app.services.llm import get_ai_reply, generate_call_summary_and_lead
 from app.services.tts import text_to_speech
 from app.services.audio_convert import mp3_to_pcm
+from app.services.repeat_intent import (
+    detect_language,
+    get_no_repeat_answer_message,
+    is_repeat_request,
+    should_cache_as_successful_answer,
+)
 from app.utils.db import insert_complete_call_log
 from app.services.sms import send_sms
 
 router = APIRouter()
+
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+AUDIO_WORK_DIR = os.path.join(_BACKEND_DIR, "audio_work")
+os.makedirs(AUDIO_WORK_DIR, exist_ok=True)
 
 # --- Hold music (interval) support ---
 # Resolve interval.mp3 path relative to project root (two levels up from this file)
@@ -43,7 +53,12 @@ async def send_hold_music_loop(websocket, stream_sid, sample_rate=8000):
     in real-time.  When the caller's AI reply is ready the parent code
     cancels this task which stops the music immediately.
     """
-    pcm_path = _get_interval_pcm(sample_rate)
+    try:
+        pcm_path = _get_interval_pcm(sample_rate)
+    except Exception as e:
+        print(f"Hold music unavailable: {e}")
+        return
+
     chunk_duration = 0.1  # 100 ms
     chunk_samples = int(sample_rate * chunk_duration)
     chunk_bytes = chunk_samples * 2  # 16-bit PCM = 2 bytes/sample
@@ -119,6 +134,40 @@ async def send_pcm_audio(
     print(f"Total PCM bytes sent: {total_sent}")
 
 
+async def send_pcm_bytes(
+    websocket,
+    pcm_data: bytes,
+    stream_sid,
+    sample_rate=8000,
+):
+    chunk_duration = 0.1
+    chunk_samples = int(sample_rate * chunk_duration)
+    chunk_bytes = chunk_samples * 2
+    total_sent = 0
+    offset = 0
+
+    while offset < len(pcm_data):
+        chunk = pcm_data[offset:offset + chunk_bytes]
+        offset += chunk_bytes
+        total_sent += len(chunk)
+        payload = base64.b64encode(chunk).decode()
+
+        try:
+            await websocket.send_json(
+                {
+                    "event": "media",
+                    "stream_sid": stream_sid,
+                    "media": {"payload": payload},
+                }
+            )
+        except Exception as e:
+            print("SEND ERROR:", repr(e))
+            break
+
+        await asyncio.sleep(0.01)
+    print(f"Total PCM bytes sent from cache: {total_sent}")
+
+
 async def play_audio_and_wait(websocket, pcm_path, stream_sid, sample_rate=8000):
     """Send PCM audio and wait for it to finish playing on Exotel's end."""
     try:
@@ -148,6 +197,40 @@ async def play_audio_and_wait(websocket, pcm_path, stream_sid, sample_rate=8000)
         raise
     except Exception as e:
         print("Playback error:", e)
+
+
+async def play_audio_bytes_and_wait(
+    websocket,
+    pcm_data: bytes,
+    stream_sid,
+    sample_rate=8000,
+):
+    """Send in-memory PCM and wait for Exotel playback to finish."""
+    try:
+        audio_size = len(pcm_data)
+        bytes_per_sec = sample_rate * 2.0
+        audio_duration = audio_size / bytes_per_sec
+        print(
+            f"Cached audio: {audio_size} bytes, duration: {audio_duration:.2f}s "
+            f"(at {sample_rate} Hz)"
+        )
+
+        await send_pcm_bytes(websocket, pcm_data, stream_sid, sample_rate=sample_rate)
+
+        wait_time = audio_duration + 1.5
+        print(f"Waiting {wait_time:.1f}s for Exotel to finish playing cached audio...")
+        await asyncio.sleep(wait_time)
+        print("Cached playback complete. Ready for next question.")
+
+    except asyncio.CancelledError:
+        print("Cached playback cancelled due to barge-in.")
+        try:
+            await websocket.send_json({"event": "clear", "stream_sid": stream_sid})
+        except Exception as e:
+            print("Failed to send clear event:", e)
+        raise
+    except Exception as e:
+        print("Cached playback error:", e)
 
 
 def get_avg_amplitude(chunk: bytes) -> float:
@@ -207,6 +290,40 @@ async def websocket_endpoint(websocket: WebSocket):
     playback_start_time = None
     hold_music_task = None  # Track hold music task separately
     call_start_time = time.time()
+    last_successful_answer = None  # Per-session cache: text, language, pcm_bytes
+    greeting_started = False
+    greeting_finished = False
+
+    async def play_welcome_greeting():
+        nonlocal greeting_finished, playback_start_time
+        try:
+            welcome_text = "Namaste! Main aapka AI assistant hoon. Aap apna sawaal boliye."
+            welcome_mp3 = os.path.join(AUDIO_WORK_DIR, "welcome.mp3")
+            welcome_pcm = os.path.join(AUDIO_WORK_DIR, "welcome.pcm")
+            mp3_file = await asyncio.to_thread(
+                text_to_speech, welcome_text, welcome_mp3
+            )
+            pcm_file = await asyncio.to_thread(
+                mp3_to_pcm, mp3_file, welcome_pcm, sample_rate=sample_rate
+            )
+            playback_start_time = time.time()
+            await play_audio_and_wait(
+                websocket, pcm_file, stream_sid, sample_rate=sample_rate
+            )
+            print("🎙️ Welcome greeting completed!")
+        except Exception as e:
+            print(f"Welcome greeting error: {e}")
+        finally:
+            greeting_finished = True
+
+    def ensure_welcome_started():
+        nonlocal greeting_started, greeting_finished
+        if greeting_started or not stream_sid:
+            return
+        greeting_started = True
+        greeting_finished = False
+        asyncio.create_task(play_welcome_greeting())
+        print("🎙️ Welcome greeting started!")
 
     try:
 
@@ -238,20 +355,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     bytes_per_sec = sample_rate * 2.0
                     print(f"Dynamically updated sample rate from start event: {sample_rate} Hz ({bytes_per_sec} bytes/sec)")
                 
-                # Instant Namaste welcome greeting
-                if stream_sid:
-                    try:
-                        welcome_text = "Namaste! Main aapka AI assistant hoon. Aap apna sawaal boliye."
-                        mp3_file = text_to_speech(welcome_text, "welcome.mp3")
-                        pcm_file = mp3_to_pcm(mp3_file, "welcome.pcm", sample_rate=sample_rate)
-                        playback_start_time = time.time()
-                        playback_task = asyncio.create_task(
-                            play_audio_and_wait(websocket, pcm_file, stream_sid, sample_rate=sample_rate)
-                        )
-                        print("🎙️ Welcome greeting sent!")
-                    except Exception as e:
-                        print(f"Welcome greeting error: {e}")
-                
+                ensure_welcome_started()
+
                 if not caller_number:
                     caller_number = (
                         start_meta.get("from") or 
@@ -263,6 +368,9 @@ async def websocket_endpoint(websocket: WebSocket):
             elif event == "media":
                 if stream_sid is None:
                     stream_sid = data.get("stream_sid") or data.get("streamSid")
+                ensure_welcome_started()
+                if not greeting_finished:
+                    continue
                 if not caller_number:
                     start_meta = data.get("start", {})
                     caller_number = (
@@ -334,96 +442,190 @@ async def websocket_endpoint(websocket: WebSocket):
                 if should_process:
                     print(f"\nProcessing audio: {reason} (total={total_duration:.2f}s)")
 
-                    # --- Start hold music while AI processes ---
-                    if hold_music_task and not hold_music_task.done():
-                        hold_music_task.cancel()
-                    if stream_sid:
-                        hold_music_task = asyncio.create_task(
-                            send_hold_music_loop(websocket, stream_sid, sample_rate=sample_rate)
+                    try:
+                        # --- Start hold music while AI processes ---
+                        if hold_music_task and not hold_music_task.done():
+                            hold_music_task.cancel()
+                        if stream_sid:
+                            hold_music_task = asyncio.create_task(
+                                send_hold_music_loop(
+                                    websocket, stream_sid, sample_rate=sample_rate
+                                )
+                            )
+
+                        # --- Run blocking I/O in threads so hold music keeps playing ---
+                        def _save_raw():
+                            raw_path = os.path.join(AUDIO_WORK_DIR, "call_audio.raw")
+                            with open(raw_path, "wb") as f:
+                                f.write(bytes(audio_buffer))
+                            return raw_path
+                        raw_path = await asyncio.to_thread(_save_raw)
+
+                        wav_path = await asyncio.to_thread(
+                            raw_to_wav,
+                            raw_path,
+                            os.path.join(AUDIO_WORK_DIR, "call_audio.wav"),
+                            sample_rate
                         )
 
-                    # --- Run blocking I/O in threads so hold music keeps playing ---
-                    def _save_raw():
-                        with open("call_audio.raw", "wb") as f:
-                            f.write(bytes(audio_buffer))
-                    await asyncio.to_thread(_save_raw)
+                        text = await asyncio.to_thread(transcribe_wav, wav_path)
+                        print(f"\nUSER SAID: {text}")
 
-                    wav_path = await asyncio.to_thread(
-                        raw_to_wav,
-                        "call_audio.raw",
-                        "call_audio.wav",
-                        sample_rate
-                    )
+                        repeat_detected = is_repeat_request(text)
+                        if repeat_detected:
+                            print(f"Repeat intent matched for STT text: '{text}'")
+                        replay_cached_pcm = False
+                        cached_pcm_bytes = None
+                        pcm_file = None
 
-                    text = await asyncio.to_thread(transcribe_wav, wav_path)
-                    print(f"\nUSER SAID: {text}")
+                        if repeat_detected:
+                            if last_successful_answer:
+                                print(
+                                    "Repeat intent detected — replaying cached response without LLM call."
+                                )
+                                reply = last_successful_answer["text"]
+                                cached_pcm_bytes = last_successful_answer.get("pcm_bytes")
+                                replay_cached_pcm = bool(cached_pcm_bytes)
 
-                    if not text.strip():
-                        reply = "Maaf kijiye, mujhe aapki aawaz nahi aayi. Kripya apna sawaal bolein."
-                    else:
-                        reply = await get_ai_reply(
-                            text,
-                            conversation_history
-                        )
+                                conversation_history.append({"role": "user", "content": text})
+                                conversation_history.append(
+                                    {"role": "assistant", "content": reply}
+                                )
+                                if len(conversation_history) > 20:
+                                    conversation_history = conversation_history[-20:]
+                            else:
+                                user_lang = detect_language(text)
+                                reply = get_no_repeat_answer_message(user_lang)
+                                print(
+                                    "Repeat intent detected — no cached answer available for this session."
+                                )
 
-                        conversation_history.append(
-                            {
-                                "role": "user",
-                                "content": text
-                            }
-                        )
+                                conversation_history.append({"role": "user", "content": text})
+                                conversation_history.append(
+                                    {"role": "assistant", "content": reply}
+                                )
+                                if len(conversation_history) > 20:
+                                    conversation_history = conversation_history[-20:]
+                        elif not text.strip():
+                            reply = "Maaf kijiye, mujhe aapki aawaz nahi aayi. Kripya apna sawaal bolein."
+                        else:
+                            reply = await get_ai_reply(
+                                text,
+                                conversation_history
+                            )
 
-                        conversation_history.append(
-                            {
-                                "role": "assistant",
-                                "content": reply
-                            }
-                        )
+                            conversation_history.append(
+                                {
+                                    "role": "user",
+                                    "content": text
+                                }
+                            )
 
-                        if len(conversation_history) > 20:
-                            conversation_history = conversation_history[-20:]
+                            conversation_history.append(
+                                {
+                                    "role": "assistant",
+                                    "content": reply
+                                }
+                            )
 
-                    print(f"\nAI REPLY: {reply}")
+                            if len(conversation_history) > 20:
+                                conversation_history = conversation_history[-20:]
 
-                    mp3_file = await asyncio.to_thread(
-                        text_to_speech,
-                        reply,
-                        "reply.mp3"
-                    )
+                        print(f"\nAI REPLY: {reply}")
 
-                    pcm_file = await asyncio.to_thread(
-                        mp3_to_pcm,
-                        mp3_file,
-                        "reply.pcm",
-                        sample_rate
-                    )
+                        if replay_cached_pcm:
+                            print("Using cached PCM audio — skipping TTS API call.")
+                        else:
+                            if repeat_detected and last_successful_answer:
+                                print(
+                                    "Cached PCM unavailable — falling back to TTS with stored answer text."
+                                )
+                            mp3_file = await asyncio.to_thread(
+                                text_to_speech,
+                                reply,
+                                os.path.join(AUDIO_WORK_DIR, "reply.mp3")
+                            )
 
-                    # --- Stop hold music NOW (AI reply is ready) ---
-                    if hold_music_task and not hold_music_task.done():
-                        hold_music_task.cancel()
-                        try:
-                            await hold_music_task
-                        except asyncio.CancelledError:
-                            pass
-                        hold_music_task = None
-                    # Brief pause to let Exotel flush the cleared buffer
-                    await asyncio.sleep(0.15)
+                            pcm_file = await asyncio.to_thread(
+                                mp3_to_pcm,
+                                mp3_file,
+                                os.path.join(AUDIO_WORK_DIR, "reply.pcm"),
+                                sample_rate
+                            )
 
-                    # Cancel any existing playback task just in case
-                    if playback_task and not playback_task.done():
-                        playback_task.cancel()
+                            if should_cache_as_successful_answer(text, reply, repeat_detected):
+                                def _read_pcm():
+                                    with open(pcm_file, "rb") as pcm_f:
+                                        return pcm_f.read()
 
-                    print("Starting background playback...")
-                    playback_start_time = time.time()
-                    playback_task = asyncio.create_task(
-                        play_audio_and_wait(websocket, pcm_file, stream_sid, sample_rate=sample_rate)
-                    )
+                                pcm_cache_bytes = await asyncio.to_thread(_read_pcm)
+                                answer_language = detect_language(text or reply)
+                                last_successful_answer = {
+                                    "text": reply,
+                                    "language": answer_language,
+                                    "pcm_bytes": pcm_cache_bytes,
+                                }
+                                print(
+                                    f"Cached last successful answer for session "
+                                    f"(language={answer_language}, "
+                                    f"pcm_bytes={len(pcm_cache_bytes)})."
+                                )
 
-                    # Reset states for the next turn
-                    audio_buffer.clear()
-                    has_spoken = False
-                    silence_seconds = 0.0
-                    initial_silence_seconds = 0.0
+                        # --- Stop hold music NOW (AI reply is ready) ---
+                        if hold_music_task and not hold_music_task.done():
+                            hold_music_task.cancel()
+                            try:
+                                await hold_music_task
+                            except asyncio.CancelledError:
+                                pass
+                            hold_music_task = None
+                        # Brief pause to let Exotel flush the cleared buffer
+                        await asyncio.sleep(0.15)
+
+                        # Cancel any existing playback task just in case
+                        if playback_task and not playback_task.done():
+                            playback_task.cancel()
+
+                        print("Starting background playback...")
+                        playback_start_time = time.time()
+                        if replay_cached_pcm:
+                            playback_task = asyncio.create_task(
+                                play_audio_bytes_and_wait(
+                                    websocket,
+                                    cached_pcm_bytes,
+                                    stream_sid,
+                                    sample_rate=sample_rate,
+                                )
+                            )
+                        else:
+                            playback_task = asyncio.create_task(
+                                play_audio_and_wait(
+                                    websocket,
+                                    pcm_file,
+                                    stream_sid,
+                                    sample_rate=sample_rate,
+                                )
+                            )
+
+                        # Reset states for the next turn
+                        audio_buffer.clear()
+                        has_spoken = False
+                        silence_seconds = 0.0
+                        initial_silence_seconds = 0.0
+
+                    except Exception as turn_err:
+                        print(f"Turn processing error (call continues): {turn_err}")
+                        if hold_music_task and not hold_music_task.done():
+                            hold_music_task.cancel()
+                            try:
+                                await hold_music_task
+                            except asyncio.CancelledError:
+                                pass
+                            hold_music_task = None
+                        audio_buffer.clear()
+                        has_spoken = False
+                        silence_seconds = 0.0
+                        initial_silence_seconds = 0.0
 
             elif event == "stop":
                 print("CALL ENDED BY USER")
@@ -444,6 +646,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     finally:
         print("WebSocket connection closing. Processing end of call analytics...")
+        last_successful_answer = None
+        print("Cleared session repeat-answer cache.")
         # Clean up hold music if still playing
         if hold_music_task and not hold_music_task.done():
             hold_music_task.cancel()
