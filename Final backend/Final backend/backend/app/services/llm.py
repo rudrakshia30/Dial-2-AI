@@ -6,10 +6,15 @@ load_dotenv()
 
 GROK_MODEL = "grok-4.1-fast"
 
-client = OpenAI(
-    api_key=os.getenv("XAI_API_KEY"),
-    base_url="https://api.x.ai/v1",
-)
+
+def _get_client():
+    api_key = os.getenv("XAI_API_KEY")
+    if not api_key:
+        raise ValueError("XAI_API_KEY environment variable is not set")
+    return OpenAI(
+        api_key=api_key,
+        base_url="https://api.x.ai/v1",
+    )
 
 import json
 import re
@@ -170,7 +175,7 @@ async def get_ai_reply(question: str, history: list = None):
         last_err = None
         for attempt in range(3):
             try:
-                response = client.chat.completions.create(
+                response = _get_client().chat.completions.create(
                     model=GROK_MODEL,
                     messages=messages,
                     max_tokens=150,
@@ -234,7 +239,7 @@ async def generate_call_summary_and_lead(history: list):
     """
 
     try:
-        response = client.chat.completions.create(
+        response = _get_client().chat.completions.create(
             model=GROK_MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
