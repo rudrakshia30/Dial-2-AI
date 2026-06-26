@@ -1,13 +1,14 @@
 import os
 from dotenv import load_dotenv
-from google import genai
-
-from google.genai import types
+from openai import OpenAI
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
+GROK_MODEL = "grok-4.1-fast"
+
+client = OpenAI(
+    api_key=os.getenv("XAI_API_KEY"),
+    base_url="https://api.x.ai/v1",
 )
 
 import json
@@ -131,20 +132,19 @@ def _extract_location(text: str):
             if loc not in skip:
                 return loc
     return None
+
+def _build_messages(question: str, history: list = None, context: str = ""):
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if history:
+        for msg in history:
+            role = "user" if msg["role"] == "user" else "assistant"
+            messages.append({"role": role, "content": msg["content"]})
+    messages.append({"role": "user", "content": question + context})
+    return messages
+
 async def get_ai_reply(question: str, history: list = None):
 
     try:
-        contents = []
-        if history:
-            for msg in history:
-                role = "user" if msg["role"] == "user" else "model"
-                contents.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part.from_text(text=msg["content"])]
-                    )
-                )
-
         # --- Keyword-based live data injection (NO extra API call) ---
         intent_data = _detect_intent(question)
             
@@ -164,40 +164,30 @@ async def get_ai_reply(question: str, history: list = None):
             )
             context = "\n[NEWS: " + news_result + "]"
 
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=question + context)]
-            )
-        )
+        messages = _build_messages(question, history, context)
 
-        config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=150,
-        )
-
-        # Retry up to 2 times for rate-limit errors (free API key)
+        # Retry up to 2 times for rate-limit errors
         last_err = None
         for attempt in range(3):
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=contents,
-                    config=config
+                response = client.chat.completions.create(
+                    model=GROK_MODEL,
+                    messages=messages,
+                    max_tokens=150,
                 )
-                return response.text.strip()
+                return response.choices[0].message.content.strip()
             except Exception as api_err:
                 last_err = api_err
-                print(f"Gemini API attempt {attempt+1} failed: {repr(api_err)}")
+                print(f"Grok API attempt {attempt+1} failed: {repr(api_err)}")
                 if attempt < 2:
                     import asyncio
                     await asyncio.sleep(2)
 
-        print("Gemini Error (all retries failed):", repr(last_err))
+        print("Grok Error (all retries failed):", repr(last_err))
         return "Maaf kijiye, thodi der mein dobara try karein."
 
     except Exception as e:
-        print("Gemini Error (outer):", repr(e))
+        print("Grok Error (outer):", repr(e))
         return "Maaf kijiye, thodi der mein dobara try karein."
 
 
@@ -244,11 +234,11 @@ async def generate_call_summary_and_lead(history: list):
     """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
+        response = client.chat.completions.create(
+            model=GROK_MODEL,
+            messages=[{"role": "user", "content": prompt}],
         )
-        text_resp = response.text.strip()
+        text_resp = response.choices[0].message.content.strip()
         # Clean potential markdown block wrappers if model doesn't obey rules
         if text_resp.startswith("```"):
             lines = text_resp.splitlines()
