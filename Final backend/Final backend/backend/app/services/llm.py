@@ -4,16 +4,18 @@ from openai import OpenAI
 
 load_dotenv()
 
-GROK_MODEL = "grok-4.1-fast"
+MODEL ="llama-3.1-8b-instant"
 
 
 def _get_client():
-    api_key = os.getenv("XAI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
+
     if not api_key:
-        raise ValueError("XAI_API_KEY environment variable is not set")
+        raise ValueError("GROQ_API_KEY not found")
+
     return OpenAI(
         api_key=api_key,
-        base_url="https://api.x.ai/v1",
+        base_url="https://api.groq.com/openai/v1",
     )
 
 import json
@@ -176,7 +178,7 @@ async def get_ai_reply(question: str, history: list = None):
         for attempt in range(3):
             try:
                 response = _get_client().chat.completions.create(
-                    model=GROK_MODEL,
+                    model=MODEL,
                     messages=messages,
                     max_tokens=150,
                 )
@@ -240,7 +242,7 @@ async def generate_call_summary_and_lead(history: list):
 
     try:
         response = _get_client().chat.completions.create(
-            model=GROK_MODEL,
+            model=MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
         text_resp = response.choices[0].message.content.strip()
