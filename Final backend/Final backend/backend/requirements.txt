@@ -8,3 +8,5 @@ aiofiles
 python-multipart
 SpeechRecognition
 gTTS
+openai
+imageio-ffmpeg
