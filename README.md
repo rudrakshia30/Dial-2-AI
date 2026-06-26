@@ -141,7 +141,7 @@ sequenceDiagram
 ## 🛠️ Tech Stack & Libraries
 | **Category** | **Purpose** | **Technologies Used** |
 |--------------|-------------|------------------------|
-| 🧠 **AI & Intelligence** | Speech-to-Text, Reasoning & Analytics | Google Gemini 2.5 Flash (STT), Gemini 3.5 Flash, `google-genai` SDK |
+| 🧠 **AI & Intelligence** | Speech-to-Text, Reasoning & Analytics | Grok STT, Grok 4.1 Fast, `openai` SDK (xAI) |
 | 🔊 **Voice Processing** | Text-to-Speech | Google TTS (`gTTS`), `FFmpeg` |
 | ⚙️ **Backend & APIs** | Server & API Handling | Python 3.12, `FastAPI`, `uvicorn`, `httpx`, `pydantic` |
 | 🔄 **Real-Time Communication** | Audio Streaming | `websockets` |
@@ -160,7 +160,7 @@ We built a highly scalable, async event-driven architecture using Python FastAPI
 graph TD
     A["User (Feature Phone)"] -->|"Makes Phone Call"| B["Exotel Telecom Cloud"]
     B -->|"WebSocket Audio Stream"| C{"FastAPI Backend"}
-    C -->|"Custom Noise Gate"| D["Gemini STT"]
+    C -->|"Custom Noise Gate"| D["Grok STT"]
     D -->|"Transcribed Hindi Text"| E{"Intent Classifier API"}
     E -->|"Weather Intent"| F["OpenWeather API"]
     E -->|"Mandi Intent"| G["Data.gov.in API"]
@@ -244,7 +244,7 @@ dial2ai/
 ├── backend/
 │   ├── app/
 │   │   ├── routes/          # FastAPI WebSockets and REST endpoints
-│   │   ├── services/        # Exotel integration, Gemini API, TTS logic
+│   │   ├── services/        # Exotel integration, Grok API, TTS logic
 │   │   └── database/        # SQLite setup and CRM logging
 │   ├── .env.example         # Environment variables template
 │   └── requirements.txt     # Python dependencies
@@ -267,7 +267,7 @@ To run Dial2AI locally for development or evaluation:
 - Python 3.12+
 - Node.js 18+
 - An [Exotel](https://exotel.com/) Account (for SIP/WebSockets)
-- Google Gemini API Key
+- xAI Grok API Key
 
 ### 2. Environment Variables
 Create a `.env` file in the `backend/` directory:
@@ -275,7 +275,7 @@ Create a `.env` file in the `backend/` directory:
 EXOTEL_SID=your_exotel_sid
 EXOTEL_TOKEN=your_exotel_token
 EXOTEL_APP_ID=your_passthru_applet_id
-GEMINI_API_KEY=your_google_ai_studio_key
+XAI_API_KEY=your_xai_api_key
 WEATHER_API_KEY=your_openweather_key
 ```
 
