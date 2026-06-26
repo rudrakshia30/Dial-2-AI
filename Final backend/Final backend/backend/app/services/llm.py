@@ -21,21 +21,48 @@ def _get_client():
 import json
 import re
 from .data_fetch import get_weather, get_mandi_price, get_govt_scheme, get_news
+from app.services.repeat_intent import detect_language
 
-SYSTEM_PROMPT = """You are a smart, friendly AI voice assistant. You help people over phone calls.
+SYSTEM_PROMPT = """You are a smart AI voice assistant on a live phone call. The caller already heard a Namaste welcome greeting before asking any question.
 
 Rules:
 
-1. Language: Detect the user's language (Hindi, Hinglish, or English) and reply in the same language. For Hindi, use Roman script like "Namaste, kaise hain aap". NEVER use Devanagari.
-2. Keep replies very short, 1-2 sentences maximum. This is a phone call.
-3. Speak naturally. Do not use asterisks, bullets, markdown, emojis, or special characters.
-4. If you see [WEATHER:...], [SCHEME:...], or [NEWS:...] tags, use that real data in your answer. Never invent numbers or facts. For news, summarize the headlines briefly in a natural spoken way.
-5. You can help with anything: general knowledge, math, health tips, education, jobs, technology, cooking, weather, crop prices, government schemes, farming, news, and more.
-6. Be warm and helpful. If the user sounds confused, guide them gently.
-7. Never make up or guess real-time information. If you do not know the correct or verified real data, clearly tell the user in their own language that you cannot provide the correct answer. For example:
-* If the user is speaking English: "I'm sorry, I can't provide the correct answer for this because I don't have verified real data."
-* If the user is speaking Hindi or Hinglish: "Maaf kijiye, main is sawal ka sahi jawab nahi de sakta kyunki mere paas verified real data nahi hai."
-8. Always prefer honesty over guessing. If real data is unavailable, say so instead of generating an inaccurate answer."""
+1. Language: Reply in EXACTLY the same language as the user's latest question.
+   - English question -> English answer only.
+   - Hindi question -> Roman Hindi only (never Devanagari).
+   - Hinglish question -> Hinglish Roman script only.
+   - Do NOT switch language unless the user switches first.
+2. Direct answers only: give the fact or solution immediately. Do NOT use filler phrases like "aapke jawab mein", "main aapko batata hoon", "aapke sawal ka jawab hai", "sure", or "of course".
+3. Never greet again: do NOT say Namaste, Hello, Hi, or Namaskar in your answers. Greeting happens once at call start only.
+4. Keep replies very short, 1-2 sentences maximum. This is a phone call.
+5. Speak naturally. Do not use asterisks, bullets, markdown, emojis, or special characters.
+6. If you see [WEATHER:...], [SCHEME:...], or [NEWS:...] tags, use that real data in your answer. Never invent numbers or facts.
+7. You can help with general knowledge, math, health, education, jobs, technology, cooking, weather, crop prices, government schemes, farming, news, and more.
+8. Never make up real-time information. If verified data is unavailable, say so briefly in the user's language.
+9. Always prefer honesty over guessing."""
+
+_LANGUAGE_HINTS = {
+    "english": "Reply in English only. No Hindi words. No greeting.",
+    "hindi": "Reply in Roman Hindi only. No greeting. Direct answer.",
+    "hinglish": "Reply in Hinglish Roman script only. No greeting. Direct answer.",
+}
+
+_GREETING_PREFIX_RE = re.compile(
+    r"^(?:namaste|namaskar|hello|hi|hey|good morning|good evening)[!,.\s]+",
+    re.IGNORECASE,
+)
+
+_FILLER_PHRASE_RES = [
+    re.compile(r"^aapke jawab mein[,\s]*", re.IGNORECASE),
+    re.compile(r"^aapke sawal ka jawab hai[,\s]*", re.IGNORECASE),
+    re.compile(r"^aapke prashn ka jawab hai[,\s]*", re.IGNORECASE),
+    re.compile(r"^main aapko batata hoon[,\s]*", re.IGNORECASE),
+    re.compile(r"^main aapko bata deta hoon[,\s]*", re.IGNORECASE),
+    re.compile(r"^main aapko bata deti hoon[,\s]*", re.IGNORECASE),
+    re.compile(r"^sure[,.\s]+", re.IGNORECASE),
+    re.compile(r"^of course[,.\s]+", re.IGNORECASE),
+    re.compile(r"^ji[,.\s]+", re.IGNORECASE),
+]
 
 # --- Keyword-based intent detection (saves 1 API call per message) ---
 WEATHER_KEYWORDS = [
@@ -140,6 +167,22 @@ def _extract_location(text: str):
                 return loc
     return None
 
+def _sanitize_reply(reply: str) -> str:
+    """Strip greetings and filler the model sometimes adds despite instructions."""
+    text = (reply or "").strip()
+    if not text:
+        return text
+
+    text = _GREETING_PREFIX_RE.sub("", text).strip()
+    for pattern in _FILLER_PHRASE_RES:
+        text = pattern.sub("", text).strip()
+
+    # Remove mid-sentence filler like ", aapke jawab mein,"
+    text = re.sub(r",?\s*aapke jawab mein,?\s*", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def _build_messages(question: str, history: list = None, context: str = ""):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if history:
@@ -152,10 +195,13 @@ def _build_messages(question: str, history: list = None, context: str = ""):
 async def get_ai_reply(question: str, history: list = None):
 
     try:
+        question_lang = detect_language(question)
+        lang_hint = _LANGUAGE_HINTS.get(question_lang, _LANGUAGE_HINTS["hinglish"])
+
         # --- Keyword-based live data injection (NO extra API call) ---
         intent_data = _detect_intent(question)
             
-        context = ""
+        context = f"\n[{lang_hint}]"
         if intent_data.get("intent") == "weather" and intent_data.get("location"):
             context = "\n[WEATHER: " + await get_weather(intent_data["location"]) + "]"
         elif intent_data.get("intent") == "mandi" and intent_data.get("crop"):
@@ -182,7 +228,8 @@ async def get_ai_reply(question: str, history: list = None):
                     messages=messages,
                     max_tokens=150,
                 )
-                return response.choices[0].message.content.strip()
+                raw = response.choices[0].message.content.strip()
+                return _sanitize_reply(raw)
             except Exception as api_err:
                 last_err = api_err
                 print(f"Grok API attempt {attempt+1} failed: {repr(api_err)}")
