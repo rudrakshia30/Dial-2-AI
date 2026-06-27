@@ -32,6 +32,7 @@ def _groq_transcribe(wav_path: str, language: str | None = None) -> str:
         "model": GROQ_STT_MODEL,
         "response_format": "json",
         "prompt": WHISPER_PROMPT,
+        "temperature": "0",
     }
     if language:
         data["language"] = language
@@ -59,8 +60,8 @@ def _google_transcribe(wav_path: str, language: str = "hi-IN") -> str:
 
 def transcribe_wav(wav_path):
     attempts = [
-        ("auto", None),
         ("hi", "hi"),
+        ("auto", None),
         ("en", "en"),
     ]
     last_text = ""
@@ -111,6 +112,7 @@ async def transcribe_audio(audio_url):
                     "model": GROQ_STT_MODEL,
                     "response_format": "json",
                     "prompt": WHISPER_PROMPT,
+                    "temperature": "0",
                 },
                 timeout=60.0,
             )
