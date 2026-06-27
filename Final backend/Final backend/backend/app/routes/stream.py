@@ -11,12 +11,15 @@ from app.services.stt import transcribe_wav
 from app.services.llm import get_ai_reply, generate_call_summary_and_lead
 from app.services.tts import text_to_speech
 from app.services.audio_convert import mp3_to_pcm
+from app.services.correct_hindi_transcript import correct_hindi_transcript
 from app.services.repeat_intent import (
     detect_language,
     get_no_repeat_answer_message,
+    is_probably_repeat_request,
     is_repeat_request,
     should_cache_as_successful_answer,
 )
+from app.services.transcript_fix import get_repeat_user_log_text
 from app.utils.db import insert_complete_call_log
 from app.services.sms import send_sms
 
@@ -468,10 +471,30 @@ async def websocket_endpoint(websocket: WebSocket):
                             sample_rate
                         )
 
-                        text = await asyncio.to_thread(transcribe_wav, wav_path)
-                        print(f"\nUSER SAID: {text}")
+                        raw_text = await asyncio.to_thread(transcribe_wav, wav_path)
+                        print(f"\nraw_transcript: {raw_text}")
 
-                        repeat_detected = is_repeat_request(text)
+                        correction = await correct_hindi_transcript(
+                            raw_text, conversation_history
+                        )
+                        text = correction.corrected_transcript
+                        print(f"corrected_transcript: {text}")
+                        print(
+                            f"detected_language: {correction.detected_language} "
+                            f"(llm_correction={'yes' if correction.used_llm else 'no'})"
+                        )
+
+                        repeat_detected = is_probably_repeat_request(
+                            raw_text,
+                            audio_duration_sec=total_duration,
+                            has_cached_answer=last_successful_answer is not None,
+                        )
+                        if not repeat_detected:
+                            repeat_detected = is_probably_repeat_request(
+                                text,
+                                audio_duration_sec=total_duration,
+                                has_cached_answer=last_successful_answer is not None,
+                            )
                         if repeat_detected:
                             print(f"Repeat intent matched for STT text: '{text}'")
                         replay_cached_pcm = False
@@ -486,8 +509,9 @@ async def websocket_endpoint(websocket: WebSocket):
                                 reply = last_successful_answer["text"]
                                 cached_pcm_bytes = last_successful_answer.get("pcm_bytes")
                                 replay_cached_pcm = bool(cached_pcm_bytes)
+                                user_log = get_repeat_user_log_text(raw_text)
 
-                                conversation_history.append({"role": "user", "content": text})
+                                conversation_history.append({"role": "user", "content": user_log})
                                 conversation_history.append(
                                     {"role": "assistant", "content": reply}
                                 )
@@ -499,8 +523,9 @@ async def websocket_endpoint(websocket: WebSocket):
                                 print(
                                     "Repeat intent detected — no cached answer available for this session."
                                 )
+                                user_log = get_repeat_user_log_text(raw_text)
 
-                                conversation_history.append({"role": "user", "content": text})
+                                conversation_history.append({"role": "user", "content": user_log})
                                 conversation_history.append(
                                     {"role": "assistant", "content": reply}
                                 )
@@ -508,10 +533,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                     conversation_history = conversation_history[-20:]
                         elif not text.strip():
                             reply = "Maaf kijiye, mujhe aapki aawaz nahi aayi. Kripya apna sawaal bolein."
+                        elif correction.needs_clarification and correction.clarification_question:
+                            reply = correction.clarification_question
                         else:
                             reply = await get_ai_reply(
                                 text,
-                                conversation_history
+                                conversation_history,
+                                response_language=correction.detected_language,
                             )
 
                             conversation_history.append(
@@ -559,7 +587,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                         return pcm_f.read()
 
                                 pcm_cache_bytes = await asyncio.to_thread(_read_pcm)
-                                answer_language = detect_language(text or reply)
+                                answer_language = correction.detected_language or detect_language(text or reply)
                                 last_successful_answer = {
                                     "text": reply,
                                     "language": answer_language,
