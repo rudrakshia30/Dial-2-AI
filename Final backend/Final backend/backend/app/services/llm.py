@@ -21,6 +21,8 @@ def _get_client():
 import json
 import re
 from .data_fetch import get_weather, get_mandi_price, get_govt_scheme, get_news
+from app.services.india_officials import get_official_fact_context
+from app.services.language_filter import user_wants_devanagari
 from app.services.repeat_intent import detect_language
 
 SYSTEM_PROMPT = """You are a smart AI voice assistant on a live phone call. The caller already heard a Namaste welcome greeting before asking any question.
@@ -29,21 +31,22 @@ Rules:
 
 1. Language: Reply in EXACTLY the same language as the user's latest question.
    - English question -> English answer only.
-   - Hindi question -> Roman Hindi only (never Devanagari).
+   - Hindi question -> natural Roman Hindi answer (unless the user explicitly asked for Devanagari).
    - Hinglish question -> Hinglish Roman script only.
    - Do NOT switch language unless the user switches first.
+   - Never discuss language rules or script preferences. Just answer the question.
 2. Direct answers only: give the fact or solution immediately. Do NOT use filler phrases like "aapke jawab mein", "main aapko batata hoon", "aapke sawal ka jawab hai", "sure", or "of course".
 3. Never greet again: do NOT say Namaste, Hello, Hi, or Namaskar in your answers. Greeting happens once at call start only.
 4. Keep replies very short, 1-2 sentences maximum. This is a phone call.
 5. Speak naturally. Do not use asterisks, bullets, markdown, emojis, or special characters.
-6. If you see [WEATHER:...], [SCHEME:...], or [NEWS:...] tags, use that real data in your answer. Never invent numbers or facts.
+6. If you see [WEATHER:...], [SCHEME:...], [NEWS:...], or [FACT:...] tags, use that exact verified data in your answer. Never invent numbers, names, or facts.
 7. You can help with general knowledge, math, health, education, jobs, technology, cooking, weather, crop prices, government schemes, farming, news, and more.
 8. Never make up real-time information. If verified data is unavailable, say so briefly in the user's language.
 9. Always prefer honesty over guessing."""
 
 _LANGUAGE_HINTS = {
-    "english": "Reply in English only. No Hindi words. No greeting.",
-    "hindi": "Reply in Roman Hindi only. No greeting. Direct answer.",
+    "english": "Reply in English only. No Hindi words. No greeting. Direct answer.",
+    "hindi": "Reply in natural Roman Hindi only. No Devanagari. No greeting. Direct answer.",
     "hinglish": "Reply in Hinglish Roman script only. No greeting. Direct answer.",
 }
 
@@ -62,6 +65,8 @@ _FILLER_PHRASE_RES = [
     re.compile(r"^sure[,.\s]+", re.IGNORECASE),
     re.compile(r"^of course[,.\s]+", re.IGNORECASE),
     re.compile(r"^ji[,.\s]+", re.IGNORECASE),
+    re.compile(r"^main samajh(?:ta|ti)? hoon[,\s]*", re.IGNORECASE),
+    re.compile(r"^it seems you want[,\s]*", re.IGNORECASE),
 ]
 
 # --- Keyword-based intent detection (saves 1 API call per message) ---
@@ -183,6 +188,35 @@ def _sanitize_reply(reply: str) -> str:
     return text
 
 
+def _language_hint_for_question(question: str, response_language: str | None = None) -> str:
+    if user_wants_devanagari(question):
+        return "Reply in Devanagari Hindi only. No greeting. Direct answer."
+    lang = response_language or detect_language(question)
+    if re.search(r"[\u0900-\u097F]", question) and lang == "hindi":
+        return _LANGUAGE_HINTS["hindi"]
+    return _LANGUAGE_HINTS.get(lang, _LANGUAGE_HINTS["hinglish"])
+
+
+def _direct_official_answer(question: str, response_language: str | None = None) -> str | None:
+    """Guaranteed correct short answers for India PM/President — no LLM hallucination."""
+    from app.services.india_officials import detect_india_official
+
+    official = detect_india_official(question)
+    if not official:
+        return None
+
+    lang = response_language or detect_language(question)
+    if official == "president":
+        if lang == "english":
+            return "Droupadi Murmu is the President of India."
+        return "Droupadi Murmu Bharat ki rashtrapati hain."
+    if official == "pm":
+        if lang == "english":
+            return "Narendra Modi is the Prime Minister of India."
+        return "Narendra Modi Bharat ke pradhan mantri hain."
+    return None
+
+
 def _build_messages(question: str, history: list = None, context: str = ""):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if history:
@@ -192,30 +226,38 @@ def _build_messages(question: str, history: list = None, context: str = ""):
     messages.append({"role": "user", "content": question + context})
     return messages
 
-async def get_ai_reply(question: str, history: list = None):
+async def get_ai_reply(
+    question: str,
+    history: list = None,
+    response_language: str | None = None,
+):
 
     try:
-        question_lang = detect_language(question)
-        lang_hint = _LANGUAGE_HINTS.get(question_lang, _LANGUAGE_HINTS["hinglish"])
+        lang_hint = _language_hint_for_question(question, response_language)
+
+        direct = _direct_official_answer(question, response_language)
+        if direct:
+            return direct
 
         # --- Keyword-based live data injection (NO extra API call) ---
         intent_data = _detect_intent(question)
-            
+
         context = f"\n[{lang_hint}]"
+        context += get_official_fact_context(question)
         if intent_data.get("intent") == "weather" and intent_data.get("location"):
-            context = "\n[WEATHER: " + await get_weather(intent_data["location"]) + "]"
+            context += "\n[WEATHER: " + await get_weather(intent_data["location"]) + "]"
         elif intent_data.get("intent") == "mandi" and intent_data.get("crop"):
             loc = intent_data.get("location", "")
             if loc:
-                context = "\n[MANDI: " + await get_mandi_price(intent_data["crop"], loc) + "]"
+                context += "\n[MANDI: " + await get_mandi_price(intent_data["crop"], loc) + "]"
         elif intent_data.get("intent") == "scheme":
-            context = "\n[SCHEME: " + await get_govt_scheme(question) + "]"
+            context += "\n[SCHEME: " + await get_govt_scheme(question) + "]"
         elif intent_data.get("intent") == "news":
             news_result = await get_news(
                 query=intent_data.get("query"),
                 category=intent_data.get("category"),
             )
-            context = "\n[NEWS: " + news_result + "]"
+            context += "\n[NEWS: " + news_result + "]"
 
         messages = _build_messages(question, history, context)
 
