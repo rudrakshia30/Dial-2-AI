@@ -1,11 +1,13 @@
 import re
 
-# English, Hindi, and Hinglish repeat phrases (minor wording variations allowed).
+# Whisper often mis-hears "dubara bolo" as goodbye/bye — handled in transcript_fix.
+from app.services.transcript_fix import is_repeat_stt_garbage
 _REPEAT_PATTERNS = [
     r"\brepeat\b",
     r"\bsay\s+it\s+again\b",
     r"\bsay\s+that\s+again\b",
     r"\bsay\s+again\b",
+    r"\btell\s+again\b",
     r"\bone\s+more\s+time\b",
     r"\bcan\s+you\s+repeat\b",
     r"\bplease\s+repeat\b",
@@ -13,6 +15,7 @@ _REPEAT_PATTERNS = [
     r"\bwhat\s+did\s+you\s+say\b",
     r"\bdobara\s+bol",
     r"\bdubara\s+bol",
+    r"\bdovara\s+bol",
     r"\bdu\s+bara\s+bol",
     r"\bdo\s+bara\s+bol",
     r"\bphir\s+se\s+bol",
@@ -20,6 +23,9 @@ _REPEAT_PATTERNS = [
     r"\bwapas\s+bol",
     r"\bdobara\s+sunao",
     r"\bphir\s+se\s+sunao",
+    r"\bdovara\s+bata",
+    r"\bdubara\s+bata",
+    r"\bdobara\s+bata",
     r"\brepeat\s+karo\b",
     r"\brepeat\s+kar\b",
     r"\banswer\s+repeat\b",
@@ -32,6 +38,17 @@ _REPEAT_PATTERNS = [
     r"\bknow\s+again\b",
 ]
 
+# Devanagari repeat phrases (e.g. "दुबारा बोलो", "फिर से बोलो").
+_DEVANAGARI_REPEAT_MARKERS = (
+    "दुबारा",
+    "दोबारा",
+    "फिर से",
+    "फिरसे",
+    "दोहराओ",
+    "दोहराना",
+    "फिर बोल",
+)
+
 # Common Whisper mis-hearings of "dubara bolo" / repeat requests.
 _REPEAT_STT_MISTRANSCRIPTIONS = (
     "do you know again",
@@ -41,6 +58,11 @@ _REPEAT_STT_MISTRANSCRIPTIONS = (
     "the bara bolo",
     "dubara bolo",
     "dobara bolo",
+    "dovara bolo",
+    "dovara batau",
+    "dovara batao",
+    "dubara batau",
+    "dubara batao",
     "phir se bolo",
     "fir se bolo",
     "say again",
@@ -52,13 +74,20 @@ _REPEAT_FILLER_WORDS = frozenset(
         "do", "you", "know", "can", "please", "say", "tell", "me", "it", "that",
         "again", "repeat", "one", "more", "time", "the", "a", "an", "to", "i",
         "we", "my", "your", "karo", "kar", "bol", "bolo", "sunao", "wapas",
-        "dobara", "dubara", "phir", "fir", "se", "bara", "du", "bar",
+        "dobara", "dubara", "dovara", "phir", "fir", "se", "bara", "du", "bar",
+        "batau", "batao", "bata", "bataiye",
     }
 )
 
 _QUESTION_STARTS = (
     "who", "what", "when", "where", "why", "how", "which", "whom", "whose",
     "is", "are", "was", "were", "kya", "kaun", "kab", "kahan", "kyun",
+    "tell", "explain", "define", "describe",
+)
+
+_TOPIC_MARKERS = (
+    "net worth", "history", "weather", "price", "prime minister", "president",
+    "mausam", "yojana", "scheme", "news", "killed", "worth",
 )
 
 _COMPILED_PATTERNS = [re.compile(p, re.IGNORECASE) for p in _REPEAT_PATTERNS]
@@ -88,6 +117,35 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
+def _has_devanagari_repeat(text: str) -> bool:
+    if not text:
+        return False
+    if not re.search(r"[\u0900-\u097F]", text):
+        return False
+    if len(text.strip()) > 80:
+        return False
+    return any(marker in text for marker in _DEVANAGARI_REPEAT_MARKERS)
+
+
+def _looks_like_new_question(text: str) -> bool:
+    if not text or not text.strip():
+        return False
+
+    if "?" in text:
+        return True
+
+    normalized = _normalize(text)
+    words = normalized.split()
+    if words and words[0] in _QUESTION_STARTS:
+        return True
+
+    lowered = text.lower()
+    if any(topic in lowered for topic in _TOPIC_MARKERS):
+        return True
+
+    return len(words) > 8
+
+
 def _is_short_repeat_heuristic(normalized: str) -> bool:
     """Catch short STT outputs like 'do you know again' with no real question content."""
     if not normalized:
@@ -97,7 +155,10 @@ def _is_short_repeat_heuristic(normalized: str) -> bool:
     if len(words) > 6:
         return False
 
-    if not any(token in normalized for token in ("again", "repeat", "dobara", "dubara", "phir", "fir", "wapas")):
+    if not any(
+        token in normalized
+        for token in ("again", "repeat", "dobara", "dubara", "dovara", "phir", "fir", "wapas", "batau", "batao")
+    ):
         return False
 
     first_word = words[0]
@@ -112,6 +173,9 @@ def is_repeat_request(text: str) -> bool:
     """Return True when the user is asking to repeat the last AI answer."""
     if not text or not text.strip():
         return False
+
+    if _has_devanagari_repeat(text):
+        return True
 
     normalized = _normalize(text)
     if not normalized:
@@ -128,6 +192,35 @@ def is_repeat_request(text: str) -> bool:
     return _is_short_repeat_heuristic(normalized)
 
 
+def is_probably_repeat_request(
+    text: str,
+    audio_duration_sec: float = 0.0,
+    has_cached_answer: bool = False,
+) -> bool:
+    """
+    Detect repeat intent even when STT garbles short phrases like 'dubara bolo'.
+    """
+    if is_repeat_request(text):
+        return True
+
+    if not has_cached_answer:
+        return False
+
+    if is_repeat_stt_garbage(text):
+        return True
+
+    # Short clips right after an answer are usually repeat requests.
+    if audio_duration_sec and audio_duration_sec <= 4.5:
+        if not text or not text.strip():
+            return True
+        if _has_devanagari_repeat(text):
+            return True
+        if len(text.strip()) < 60 and not _looks_like_new_question(text):
+            return True
+
+    return False
+
+
 def detect_language(text: str) -> str:
     """Rough language tag for spoken replies: english, hindi, or hinglish."""
     if not text or not text.strip():
@@ -139,7 +232,7 @@ def detect_language(text: str) -> str:
     lowered = text.lower().strip()
     words = re.findall(r"[a-zA-Z]+", lowered)
 
-    if words and all(w in _ENGLISH_MARKERS or len(w) > 2 for w in words):
+    if words:
         english_question_starts = (
             "who", "what", "when", "where", "why", "how", "which", "is", "are",
             "was", "were", "do", "does", "did", "can", "could", "will", "would",
