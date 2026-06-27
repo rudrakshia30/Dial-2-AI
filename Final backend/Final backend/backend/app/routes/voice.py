@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 from app.services.stt import transcribe_audio
 from app.services.llm import get_ai_reply
+from app.services.correct_hindi_transcript import correct_hindi_transcript
 from app.services.data_fetch import get_mandi_price, get_weather, get_govt_scheme
 from app.utils.db import insert_log
 from dotenv import load_dotenv
@@ -53,20 +54,31 @@ async def question(request: Request):
     )
     caller_number = params.get("CallFrom", params.get("From", "unknown"))
     transcript = ""
+    raw_transcript = ""
+    correction = None
     intent_data = {}
     reply = "Kripya dobara boliye."
 
     print(f"audio_url={audio_url} caller={caller_number}")
 
     if audio_url:
-        transcript = await transcribe_audio(audio_url)
-        print("Transcript:", transcript)
-        print("TRANSCRIPT RECEIVED =", transcript)
+        raw_transcript = await transcribe_audio(audio_url)
+        print(f"raw_transcript: {raw_transcript}")
+        correction = await correct_hindi_transcript(raw_transcript)
+        transcript = correction.corrected_transcript
+        print(f"corrected_transcript: {transcript}")
+        print(f"detected_language: {correction.detected_language}")
     else:
         print("WARNING: No recording URL found in params:", params)
 
-    if transcript:
-        reply = await get_ai_reply(transcript)
+    if transcript and correction:
+        if correction.needs_clarification and correction.clarification_question:
+            reply = correction.clarification_question
+        else:
+            reply = await get_ai_reply(
+                transcript,
+                response_language=correction.detected_language,
+            )
 
         intent_data = {
             "intent": "general",
