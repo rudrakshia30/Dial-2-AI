@@ -26,6 +26,7 @@ def _news_key():
     return os.getenv("NEWS_API_KEY")
 
 MANDI_CACHE_PATH = Path(__file__).resolve().parents[1] / "mandi_prices.json"
+DAILY_MANDI_CACHE_PATH = Path(__file__).resolve().parents[1] / "daily_mandi_prices.json"
 
 
 def _load_mandi_cache():
@@ -37,6 +38,60 @@ def _load_mandi_cache():
         except Exception as e:
             print(f"[MandiAPI] Failed to load cache: {e}")
     return None
+
+
+def _load_daily_mandi_cache():
+    """Load local daily mandi prices cache. Returns list of records or None."""
+    if DAILY_MANDI_CACHE_PATH.exists():
+        try:
+            with open(DAILY_MANDI_CACHE_PATH, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[MandiAPI] Failed to load daily cache: {e}")
+    return None
+
+
+def _query_daily_mandi_cache(records, crop, location):
+    """Query the local daily cache for crop/location price and return formatted string."""
+    crop_lower = (crop or "").lower()
+    filtered = [
+        r for r in records
+        if r.get("commodity", "").strip().lower() == crop_lower
+    ]
+    if not filtered:
+        filtered = [
+            r for r in records
+            if crop_lower in r.get("commodity", "").strip().lower()
+        ]
+
+    if not filtered:
+        loc_phrase = f" {location}" if location else ""
+        return f"Maaf kijiye,{loc_phrase} {crop or 'crop'} ka daam uplabdh nahi hai."
+
+    if location:
+        loc_lower = location.lower()
+        loc_filtered = [
+            r for r in filtered
+            if loc_lower in r.get("market", "").strip().lower()
+            or loc_lower in r.get("district", "").strip().lower()
+            or loc_lower in r.get("state", "").strip().lower()
+        ]
+        if loc_filtered:
+            rec = loc_filtered[0]
+            mkt = rec.get("market")
+            comm = rec.get("commodity")
+            price = rec.get("modal_price")
+            return f"Aaj {mkt} mandi mein {comm} ka modal daam {price} rupaye prati quintal hai."
+
+    # If no location match or no location specified, return up to 3 major markets
+    market_prices = []
+    for rec in filtered[:3]:
+        mkt = rec.get("market")
+        comm = rec.get("commodity")
+        pr = rec.get("modal_price")
+        market_prices.append(f"{mkt} mandi mein {pr} rupaye")
+    summary = ", ".join(market_prices)
+    return f"Aaj ke data ke mutabiq, {crop} ka modal daam: {summary} prati quintal hai."
 
 
 def _query_mandi_cache(records, canonical_crop, matched_state):
@@ -147,6 +202,16 @@ async def get_mandi_price(crop: str, location: str):
 
         # ── 2. General crops: live daily mandi API ─────────────────────────────
         else:
+            # A. Try local daily cache first (instant, no network)
+            daily_cache = _load_daily_mandi_cache()
+            if daily_cache:
+                print(f"[MandiAPI] Using local daily cache for crop: {crop}, location: {location}")
+                # Check if we can find a result in the cache
+                result = _query_daily_mandi_cache(daily_cache, crop, location)
+                if "Maaf kijiye" not in result:
+                    return result
+
+            # B. Fall back to live API if not found in cache or cache missing
             DATA_GOV_KEY = _data_gov_key()
             if not DATA_GOV_KEY:
                 print("[MandiAPI] ERROR: MANDI_PRICES key is not set.")
@@ -162,18 +227,23 @@ async def get_mandi_price(crop: str, location: str):
                 params["filters[market]"] = location
 
             print(f"[MandiAPI] Querying daily mandi API for crop: {crop}, location: {location}")
-            async with httpx.AsyncClient(timeout=25.0) as client:
-                r = await client.get(url, params=params)
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    r = await client.get(url, params=params)
 
-            if r.status_code != 200:
-                print(f"[MandiAPI] HTTP error: {r.status_code}")
-                return f"Maaf kijiye, {crop} ka daam fetch karne mein problem aayi."
+                if r.status_code == 200:
+                    records = r.json().get("records", [])
+                    if records:
+                        price = records[0].get("modal_price")
+                        loc_phrase = f" {location}" if location else ""
+                        return f"Aaj{loc_phrase} mandi mein {crop} ka modal daam {price} rupaye prati quintal hai."
+            except Exception as e:
+                print(f"[MandiAPI] Live daily API failed: {e}")
 
-            records = r.json().get("records", [])
-            if records:
-                price = records[0].get("modal_price")
-                loc_phrase = f" {location}" if location else ""
-                return f"Aaj{loc_phrase} mandi mein {crop} ka modal daam {price} rupaye prati quintal hai."
+            # C. Ultimate fallback: if live API failed/timed out, try daily cache again regardless
+            if daily_cache:
+                print(f"[MandiAPI] Ultimate fallback to local daily cache for crop: {crop}, location: {location}")
+                return _query_daily_mandi_cache(daily_cache, crop, location)
 
     except Exception as e:
         print(f"[MandiAPI] Unexpected error: {repr(e)}")
