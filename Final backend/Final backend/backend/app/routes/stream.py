@@ -736,20 +736,29 @@ async def websocket_endpoint(websocket: WebSocket):
                 lead_json_str = "{}"
                 
             print(f"Saving complete call logs for phone: {phone_to_use}...")
+
+            def _str(val, default=""):
+                """Safely convert any value to a SQLite-safe string."""
+                if val is None:
+                    return default
+                if isinstance(val, (list, dict)):
+                    return json.dumps(val, ensure_ascii=False)
+                return str(val)
+
             insert_complete_call_log(
                 phone_number=phone_to_use,
-                transcript=full_transcript,
-                intent=intent,
+                transcript=_str(full_transcript),
+                intent=_str(intent, "general"),
                 crop="",
                 location="",
-                response=last_reply,
+                response=_str(last_reply),
                 status="success" if full_transcript else "failed",
                 duration_seconds=duration,
-                summary_text=summary_text,
-                sentiment=sentiment,
-                customer_name=cust_name,
-                outcome=outcome,
-                lead_json=lead_json_str
+                summary_text=_str(summary_text),
+                sentiment=_str(sentiment, "Neutral"),
+                customer_name=_str(cust_name, "Unknown"),
+                outcome=_str(outcome),
+                lead_json=_str(lead_json_str, "{}")
             )
             
             # SMS follow up
