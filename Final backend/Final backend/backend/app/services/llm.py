@@ -236,17 +236,15 @@ def _extract_location(text: str):
         r'(?:in|at|of|mein|ka|ki|ke|near)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)',
         r'([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]+)?)',
     ]
+    crop_keywords = {k.lower() for k in CROP_MAP.keys()} | {v.lower() for v in CROP_MAP.values()}
+    
     for p in patterns:
-        m = re.search(p, text)
-        if m:
+        for m in re.finditer(p, text):
             loc = m.group(1).strip()
             skip = {"Kya", "Aaj", "Kal", "Mujhe", "Bhai", "Batao", "Please", "Sir", "Madam",
                     "Mausam", "Weather", "Price", "Rate", "Daam", "How", "What", "Tell",
-                    "Kaisa", "Kaise",
-                    # Crop names — prevent them being matched as locations
-                    "Arhar", "Urad", "Moong", "Potato", "Onion", "Tomato", "Wheat",
-                    "Chana", "Rice", "Paddy"}
-            if loc not in skip:
+                    "Kaisa", "Kaise"}
+            if loc not in skip and loc.lower() not in crop_keywords:
                 return loc
     return None
 
