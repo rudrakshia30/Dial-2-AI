@@ -112,6 +112,16 @@ def insert_complete_call_log(
     outcome=None,
     lead_json=None
 ):
+    import json as _json
+
+    def _safe(val, default=""):
+        """Convert list/dict to JSON string so SQLite doesn't raise ProgrammingError."""
+        if val is None:
+            return default
+        if isinstance(val, (list, dict)):
+            return _json.dumps(val, ensure_ascii=False)
+        return str(val) if not isinstance(val, (str, int, float, bytes)) else val
+
     conn = sqlite3.connect(DB_NAME)
     conn.execute(
         """
@@ -137,18 +147,18 @@ def insert_complete_call_log(
         (
             mask_phone(phone_number),
             datetime.utcnow().isoformat(),
-            transcript,
-            intent,
-            crop,
-            location,
-            response,
-            status,
+            _safe(transcript),
+            _safe(intent, "general"),
+            _safe(crop),
+            _safe(location),
+            _safe(response),
+            _safe(status),
             duration_seconds,
-            summary_text,
-            sentiment,
-            customer_name,
-            outcome,
-            lead_json
+            _safe(summary_text),
+            _safe(sentiment, "Neutral"),
+            _safe(customer_name, "Unknown"),
+            _safe(outcome),
+            _safe(lead_json, "{}")
         )
     )
     conn.commit()
