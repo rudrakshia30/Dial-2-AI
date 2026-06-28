@@ -39,7 +39,7 @@ Rules:
 3. Never greet again: do NOT say Namaste, Hello, Hi, or Namaskar in your answers. Greeting happens once at call start only.
 4. Keep replies very short, 1-2 sentences maximum. This is a phone call.
 5. Speak naturally. Do not use asterisks, bullets, markdown, emojis, or special characters.
-6. If you see [WEATHER:...], [SCHEME:...], [NEWS:...], or [FACT:...] tags, use that exact verified data in your answer. Never invent numbers, names, or facts.
+6. If you see [WEATHER:...], [SCHEME:...], [NEWS:...], [MANDI:...], or [FACT:...] tags, use that exact verified data in your answer. Never invent numbers, names, or facts.
 7. You can help with general knowledge, math, health, education, jobs, technology, cooking, weather, crop prices, government schemes, farming, news, and more.
 8. Never make up real-time information. If verified data is unavailable, say so briefly in the user's language.
 9. Always prefer honesty over guessing."""
@@ -122,6 +122,59 @@ CITY_MAP = {
     "फरीदाबाद": "Faridabad", "गाजियाबाद": "Ghaziabad",
 }
 
+MANDI_KEYWORDS = [
+    "mandi", "price", "rate", "daam", "bhav", "bhaav", "modal", "quintal",
+    # Devanagari
+    "मंडी", "दाम", "भाव", "रेट", "कीमत", "प्रति क्विंटल",
+]
+
+CROP_MAP = {
+    "arhar": "Arhar", "tur": "Arhar", "tuar": "Arhar", "pigeon pea": "Arhar",
+    "अरहर": "Arhar", "तुअर": "Arhar", "तूर": "Arhar",
+    "urad": "Urad", "black gram": "Urad", "urad dal": "Urad",
+    "उड़द": "Urad", "उरद": "Urad",
+    "moong": "Moong", "green gram": "Moong", "moong dal": "Moong",
+    "मूंग": "Moong", "मूँग": "Moong",
+    "potato": "Potato", "aloo": "Potato", "alu": "Potato",
+    "आलू": "Potato",
+    "onion": "Onion", "pyaz": "Onion", "pyaaz": "Onion",
+    "प्याज": "Onion", "प्याज़": "Onion",
+    "tomato": "Tomato", "tamatar": "Tomato",
+    "टमाटर": "Tomato",
+    "wheat": "Wheat", "gehun": "Wheat", "gehoon": "Wheat",
+    "गेहूं": "Wheat", "गेहूँ": "Wheat",
+    "chana": "Chana", "gram": "Chana", "chickpea": "Chana",
+    "चना": "Chana",
+    "rice": "Rice", "chawal": "Rice",
+    "चावल": "Rice",
+    "paddy": "Paddy(Dhan)", "dhan": "Paddy(Dhan)",
+    "धान": "Paddy(Dhan)",
+}
+
+STATE_MAP = {
+    "rajasthan": "Rajasthan", "राजस्थान": "Rajasthan",
+    "andhra pradesh": "Andhra Pradesh", "andhra": "Andhra Pradesh", "आंध्र प्रदेश": "Andhra Pradesh", "आंध्र": "Andhra Pradesh",
+    "tamil nadu": "Tamil Nadu", "tamilnadu": "Tamil Nadu", "तमिलनाडु": "Tamil Nadu",
+    "bihar": "Bihar", "बिहार": "Bihar",
+    "uttar pradesh": "Uttar Pradesh", "up": "Uttar Pradesh", "उत्तर प्रदेश": "Uttar Pradesh", "यूपी": "Uttar Pradesh",
+    "jharkhand": "Jharkhand", "झारखंड": "Jharkhand", "झारखण्ड": "Jharkhand",
+    "karnataka": "Karnataka", "कर्नाटक": "Karnataka",
+    "gujarat": "Gujarat", "गुजरात": "Gujarat",
+    "chhattisgarh": "Chhattisgarh", "chhatisgarh": "Chhattisgarh", "छत्तीसगढ़": "Chhattisgarh", "छत्तीसगढ़": "Chhattisgarh",
+    "odisha": "Odisha", "orissa": "Odisha", "ओडिशा": "Odisha", "उड़ीसा": "Odisha",
+    "west bengal": "West Bengal", "bengal": "West Bengal", "paschim bengal": "West Bengal", "पश्चिम बंगाल": "West Bengal", "बंगाल": "West Bengal",
+    "madhya pradesh": "Madhya Pradesh", "mp": "Madhya Pradesh", "मध्य प्रदेश": "Madhya Pradesh", "एमपी": "Madhya Pradesh",
+    "maharashtra": "Maharashtra", "mh": "Maharashtra", "महाराष्ट्र": "Maharashtra",
+    "telangana": "Telangana", "तेलंगाना": "Telangana",
+}
+
+def _extract_state(text: str) -> str | None:
+    lowered = text.lower()
+    for state_kw, canonical in STATE_MAP.items():
+        if state_kw in lowered or state_kw in text:
+            return canonical
+    return None
+
 def _detect_intent(question: str):
     q = question.lower()
     # Check weather (works for both Roman and Devanagari)
@@ -151,6 +204,26 @@ def _detect_intent(question: str):
             if len(topic) >= 3:
                 search_query = topic
         return {"intent": "news", "category": detected_category, "query": search_query}
+
+    # Check mandi/crop price
+    detected_crop = None
+    for crop_kw, canonical in CROP_MAP.items():
+        if crop_kw in q or crop_kw in question:
+            detected_crop = canonical
+            break
+
+    is_mandi_query = any(w in q or w in question for w in MANDI_KEYWORDS)
+    if is_mandi_query or detected_crop:
+        # For mandi queries, try state extraction first (e.g. "Maharashtra mein")
+        loc = _extract_state(question)
+        # Fall back to location extractor only if state wasn't found
+        if not loc:
+            loc = _extract_location(question)
+            # Discard if the "location" is actually the crop name
+            if loc and detected_crop and loc.lower() == detected_crop.lower():
+                loc = None
+        return {"intent": "mandi", "crop": detected_crop, "location": loc}
+
     return {"intent": "general"}
 
 def _extract_location(text: str):
@@ -167,7 +240,12 @@ def _extract_location(text: str):
         m = re.search(p, text)
         if m:
             loc = m.group(1).strip()
-            skip = {"Kya", "Aaj", "Kal", "Mujhe", "Bhai", "Batao", "Please", "Sir", "Madam", "Mausam", "Weather", "Price", "Rate", "Daam", "How", "What", "Tell", "Kaisa", "Kaise"}
+            skip = {"Kya", "Aaj", "Kal", "Mujhe", "Bhai", "Batao", "Please", "Sir", "Madam",
+                    "Mausam", "Weather", "Price", "Rate", "Daam", "How", "What", "Tell",
+                    "Kaisa", "Kaise",
+                    # Crop names — prevent them being matched as locations
+                    "Arhar", "Urad", "Moong", "Potato", "Onion", "Tomato", "Wheat",
+                    "Chana", "Rice", "Paddy"}
             if loc not in skip:
                 return loc
     return None
@@ -247,9 +325,8 @@ async def get_ai_reply(
         if intent_data.get("intent") == "weather" and intent_data.get("location"):
             context += "\n[WEATHER: " + await get_weather(intent_data["location"]) + "]"
         elif intent_data.get("intent") == "mandi" and intent_data.get("crop"):
-            loc = intent_data.get("location", "")
-            if loc:
-                context += "\n[MANDI: " + await get_mandi_price(intent_data["crop"], loc) + "]"
+            loc = intent_data.get("location") or ""
+            context += "\n[MANDI: " + await get_mandi_price(intent_data["crop"], loc) + "]"
         elif intent_data.get("intent") == "scheme":
             context += "\n[SCHEME: " + await get_govt_scheme(question) + "]"
         elif intent_data.get("intent") == "news":
