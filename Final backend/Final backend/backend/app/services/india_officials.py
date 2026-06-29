@@ -2,13 +2,10 @@
 import re
 
 PM_FACT = (
-    "The Prime Minister of India is Narendra Modi. "
-    "Always use the name Narendra Modi for PM of India questions."
+    "The current Prime Minister of India is Narendra Modi."
 )
 PRESIDENT_FACT = (
-    "The President of India is Droupadi Murmu. "
-    "Always use the name Droupadi Murmu for President of India questions. "
-    "Do not use any other name."
+    "The current President of India is Droupadi Murmu."
 )
 
 _INDIA_MARKERS = ("भारत", "bharat", "india", "भारत के", "bharat ke")
@@ -32,10 +29,29 @@ _PHONETIC_PRESIDENT_RES = (
     re.compile(r"ra[shz]tr\w*\s*pat", re.I),
 )
 
+_HISTORICAL_MARKERS = (
+    "first", "1st", "second", "2nd", "third", "3rd", "previous", "former", "past", "history", "list of", "list",
+    "pehle", "pehla", "pahla", "pahle", "pehli", "pahli", "purv", "pichle", "pichla", "purva", "bhootpurv", "bhootpoorv", 
+    "itihaas", "itihas", "soochi", "suchi", "pehle wale", "pahle wale",
+    "पहले", "पहला", "पहली", "पूर्व", "पिछले", "पिछला", "भूतपूर्व", "इतिहास", "सूची"
+)
+
 
 def mentions_india(text: str) -> bool:
     lowered = (text or "").lower()
     return any(m in text or m in lowered for m in _INDIA_MARKERS)
+
+
+def is_historical_question(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    if any(m in lowered for m in _HISTORICAL_MARKERS):
+        return True
+    # Check for past years (e.g. 1950, 1999, 2015, 2021)
+    if re.search(r"\b(19\d{2}|20[01]\d|202[01])\b", lowered):
+        return True
+    return False
 
 
 def is_phonetic_president_question(text: str) -> bool:
@@ -57,6 +73,8 @@ def is_phonetic_president_question(text: str) -> bool:
 def is_president_question(text: str) -> bool:
     if not text or not text.strip():
         return False
+    if is_historical_question(text):
+        return False
     lowered = text.lower()
     if any(m in text or m in lowered for m in _PRESIDENT_MARKERS):
         if mentions_india(text) or "bharat" in lowered or "india" in lowered:
@@ -75,7 +93,7 @@ def is_president_question(text: str) -> bool:
 def is_pm_question(text: str) -> bool:
     if not text or not text.strip():
         return False
-    if is_president_question(text):
+    if is_president_question(text) or is_historical_question(text):
         return False
     lowered = text.lower()
     if mentions_india(text) and any(
