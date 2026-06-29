@@ -215,8 +215,6 @@ def is_probably_repeat_request(
             return True
         if _has_devanagari_repeat(text):
             return True
-        if len(text.strip()) < 60 and not _looks_like_new_question(text):
-            return True
 
     return False
 
