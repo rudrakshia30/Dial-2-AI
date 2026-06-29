@@ -10,3 +10,4 @@ SpeechRecognition
 gTTS
 openai
 imageio-ffmpeg
+neo4j
