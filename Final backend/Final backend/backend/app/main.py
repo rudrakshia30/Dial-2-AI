@@ -7,6 +7,7 @@ from app.utils.db import init_db
 from app.routes.stream import router as stream_router
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from app.services.neo4j_service import init_neo4j, close_neo4j
 
 load_dotenv()
 
@@ -45,6 +46,14 @@ async def startup():
 
     if not (os.getenv("GROQ_API_KEY") or "").strip():
         print("WARNING: GROQ_API_KEY is not set in .env — LLM and STT will not work.")
+
+    # Initialise Neo4j AuraDB (non-fatal if unavailable)
+    await init_neo4j()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await close_neo4j()
 
 
 @app.get("/ping")
