@@ -1,10 +1,5 @@
 import re
 
-from app.services.india_officials import (
-    is_phonetic_president_question,
-    is_president_question,
-    normalize_india_official_question,
-)
 
 # Whisper often mis-hears "dubara bolo" as goodbye/bye.
 _REPEAT_STT_GARBAGE = frozenset(
@@ -83,17 +78,6 @@ def normalize_user_transcript(text: str) -> str:
 
     for pattern, replacement in _ROMAN_FIXES:
         corrected = pattern.sub(replacement, corrected)
-
-    canonical = normalize_india_official_question(corrected)
-    if canonical:
-        if canonical != text.strip():
-            print(f"STT corrected India official question: '{text}' -> '{canonical}'")
-        return canonical
-
-    if is_phonetic_president_question(corrected) or is_phonetic_president_question(text):
-        canonical = "Bharat ke rashtrapati kaun hain?"
-        print(f"STT corrected phonetic president question: '{text}' -> '{canonical}'")
-        return canonical
 
     if corrected != text.strip():
         print(f"STT corrected: '{text}' -> '{corrected}'")
