@@ -44,6 +44,60 @@ Rules:
 8. Never make up real-time information. If verified data is unavailable, say so briefly in the user's language.
 9. Always prefer honesty over guessing."""
 
+
+def build_memory_prompt(memory: dict) -> str:
+    """
+    Format a caller's Neo4j profile into a concise memory block that is
+    prepended to the system prompt.
+
+    The AI is instructed to use this information naturally — not to recite
+    it verbatim or repeat it unnecessarily.
+    """
+    if not memory:
+        return ""
+
+    lines = ["\n\n[CALLER MEMORY — use naturally, do not repeat everything]",
+             "Caller Profile:"]
+
+    if memory.get("name"):
+        lines.append(f"  Name: {memory['name']}")
+    if memory.get("age"):
+        lines.append(f"  Age: {memory['age']}")
+    if memory.get("city"):
+        lines.append(f"  City: {memory['city']}")
+    if memory.get("college"):
+        lines.append(f"  College: {memory['college']}")
+    if memory.get("profession"):
+        lines.append(f"  Profession: {memory['profession']}")
+    if memory.get("preferred_language"):
+        lines.append(f"  Preferred Language: {memory['preferred_language']}")
+
+    if memory.get("interests"):
+        lines.append(f"  Known Interests: {', '.join(memory['interests'])}")
+
+    if memory.get("projects"):
+        lines.append(f"  Projects: {', '.join(memory['projects'])}")
+
+    if memory.get("summary"):
+        lines.append(f"  Profile Summary: {memory['summary']}")
+
+    recent = memory.get("recent_conversations", [])
+    if recent:
+        lines.append("  Previous Call Summaries (most recent first):")
+        for conv in recent[:3]:  # inject max 3 to keep prompt short
+            ts = conv.get("timestamp", "")[:10]  # date only
+            s  = conv.get("summary", "")
+            if s:
+                lines.append(f"    - [{ts}] {s}")
+
+    lines.append(
+        "Instructions: Use this memory naturally in conversation. "
+        "Only mention a memory when it is clearly relevant. "
+        "Do not recite the profile. Do not say 'according to our records'."
+    )
+
+    return "\n".join(lines)
+
 _LANGUAGE_HINTS = {
     "english": "Reply in English only. No Hindi words. No greeting. Direct answer.",
     "hindi": "Reply in natural Roman Hindi only. No Devanagari. No greeting. Direct answer.",
@@ -293,8 +347,18 @@ def _direct_official_answer(question: str, response_language: str | None = None)
     return None
 
 
-def _build_messages(question: str, history: list = None, context: str = ""):
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+def _build_messages(
+    question: str,
+    history: list = None,
+    context: str = "",
+    caller_memory: dict = None,
+):
+    # Prepend caller memory block to the system prompt when available
+    system_content = SYSTEM_PROMPT
+    if caller_memory:
+        system_content = SYSTEM_PROMPT + build_memory_prompt(caller_memory)
+
+    messages = [{"role": "system", "content": system_content}]
     if history:
         for msg in history:
             role = "user" if msg["role"] == "user" else "assistant"
@@ -306,6 +370,7 @@ async def get_ai_reply(
     question: str,
     history: list = None,
     response_language: str | None = None,
+    caller_memory: dict = None,
 ):
 
     try:
@@ -334,7 +399,7 @@ async def get_ai_reply(
             )
             context += "\n[NEWS: " + news_result + "]"
 
-        messages = _build_messages(question, history, context)
+        messages = _build_messages(question, history, context, caller_memory=caller_memory)
 
         # Retry up to 2 times for rate-limit errors
         last_err = None
