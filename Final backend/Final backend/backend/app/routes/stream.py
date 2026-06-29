@@ -22,6 +22,8 @@ from app.services.repeat_intent import (
 from app.services.transcript_fix import get_repeat_user_log_text
 from app.utils.db import insert_complete_call_log
 from app.services.sms import send_sms
+from app.services.neo4j_service import get_relevant_memory, update_person_memory, save_conversation as save_neo4j_conversation
+from app.services.memory_extractor import extract_memory_from_transcript
 
 router = APIRouter()
 
@@ -282,6 +284,8 @@ async def websocket_endpoint(websocket: WebSocket):
     stream_sid = None
     conversation_history = []
     caller_number = None
+    caller_memory = None  # Populated from Neo4j once caller_number is known
+    memory_loaded = False  # Flag to avoid repeated DB lookups
     
     # State tracking for silence detection
     has_spoken = False
@@ -367,6 +371,19 @@ async def websocket_endpoint(websocket: WebSocket):
                         start_meta.get("customParameters", {}).get("From") or
                         start_meta.get("customParameters", {}).get("from")
                     )
+
+                # --- Load caller memory from Neo4j (non-blocking, safe to fail) ---
+                if caller_number and not memory_loaded:
+                    memory_loaded = True
+                    try:
+                        caller_memory = await get_relevant_memory(caller_number)
+                        if caller_memory:
+                            print(f"🧠 Memory loaded for {caller_number}: name={caller_memory.get('name', 'unknown')}")
+                        else:
+                            print(f"🧠 No prior memory found for {caller_number} (first call or empty profile).")
+                    except Exception as mem_err:
+                        print(f"⚠️  Memory load failed (non-fatal): {mem_err}")
+                        caller_memory = None
 
             elif event == "media":
                 if stream_sid is None:
@@ -540,6 +557,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 text,
                                 conversation_history,
                                 response_language=correction.detected_language,
+                                caller_memory=caller_memory,
                             )
 
                             conversation_history.append(
@@ -771,3 +789,31 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
             else:
                 print("Caller number unknown. Skipping SMS sending.")
+
+            # ----------------------------------------------------------------
+            # Neo4j persistent memory — extract facts & save conversation
+            # Runs after all other analytics; safe to fail independently.
+            # ----------------------------------------------------------------
+            if phone_to_use and phone_to_use not in ("unknown", "streaming_caller"):
+                try:
+                    print(f"🧠 Extracting persistent memory for {phone_to_use}...")
+                    extracted_memory = await extract_memory_from_transcript(
+                        conversation_history,
+                        existing_memory=caller_memory,
+                    )
+                    if extracted_memory:
+                        await update_person_memory(phone_to_use, extracted_memory)
+                        print(f"🧠 Memory updated in Neo4j for {phone_to_use}.")
+                    else:
+                        print(f"🧠 No extractable memory from this call (too short or empty).")
+
+                    # Save a Conversation node with this call's summary
+                    if summary_text and summary_text not in ("No summary generated.", ""):
+                        await save_neo4j_conversation(phone_to_use, summary_text)
+                        print(f"🧠 Conversation saved to Neo4j for {phone_to_use}.")
+
+                except Exception as neo4j_err:
+                    # Non-fatal — log and continue
+                    print(f"⚠️  Neo4j post-call save failed (non-fatal): {neo4j_err}")
+            else:
+                print("🧠 Skipping Neo4j memory save (caller number unknown).")
