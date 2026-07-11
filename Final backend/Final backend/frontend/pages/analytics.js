@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
 import { apiFetch } from '../lib/api';
+import GraphVisualizer from '../components/GraphVisualizer';
 import {
   AreaChart,
   Area,
@@ -88,8 +89,11 @@ export default function Analytics() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [neo4jStats, setNeo4jStats] = useState(null);
+  const [neo4jLoading, setNeo4jLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch SQLite metrics
     apiFetch('/api/stats')
       .then((data) => {
         setStats(data);
@@ -97,6 +101,14 @@ export default function Analytics() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Fetch Neo4j AuraDB Live Graph metrics
+    apiFetch('/api/neo4j/stats')
+      .then((data) => {
+        setNeo4jStats(data);
+      })
+      .catch((err) => console.error("Neo4j stats fetch error:", err))
+      .finally(() => setNeo4jLoading(false));
   }, []);
 
   /* derived data */
@@ -285,10 +297,96 @@ export default function Analytics() {
                 </div>
               </div>
 
+              {/* ─── Neo4j AuraDB Graph Analytics ─── */}
+              <div className="mb-8" style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '520ms' }}>
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="px-2.5 py-1 text-xs font-semibold tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                    AuraDB Live Graph
+                  </span>
+                  <h2 className="text-xl font-bold text-white">Relationship-Based Call Analytics</h2>
+                </div>
+
+                {/* Graph Card Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+                  <div className="glass-card p-6 flex flex-col">
+                    <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Graph Nodes: Callers</p>
+                    <p className="text-2xl font-extrabold text-cyan-400">{neo4jStats?.callers ?? 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">Unique Person nodes</p>
+                  </div>
+                  <div className="glass-card p-6 flex flex-col">
+                    <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Graph Nodes: Topics</p>
+                    <p className="text-2xl font-extrabold text-violet-400">{neo4jStats?.topics ?? 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">Unique Topic nodes</p>
+                  </div>
+                  <div className="glass-card p-6 flex flex-col">
+                    <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Graph Nodes: Cities</p>
+                    <p className="text-2xl font-extrabold text-amber-400">{neo4jStats?.cities ?? 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">Unique City nodes</p>
+                  </div>
+                  <div className="glass-card p-6 flex flex-col">
+                    <p className="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Graph Edges: Relationships</p>
+                    <p className="text-2xl font-extrabold text-emerald-400">{neo4jStats?.relationships ?? 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">LIVES_IN & INTERESTED_IN links</p>
+                  </div>
+                </div>
+
+                {/* Interactive Network Graph Visualizer */}
+                <div className="glass-card p-6 mb-6">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Interactive Neo4j Knowledge Graph (AuraDB Live Nodes & Edges)
+                  </h3>
+                  <GraphVisualizer />
+                </div>
+
+                {/* Graph Sub-breakdown lists */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Top Topics in Graph */}
+                  <div className="glass-card p-6">
+                    <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                      Top Interests in Graph (INTERESTED_IN)
+                    </h3>
+                    {neo4jStats?.top_topics?.length > 0 ? (
+                      <div className="space-y-3">
+                        {neo4jStats.top_topics.map((topic, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm py-1 border-b border-white/5 last:border-0">
+                            <span className="text-gray-200 font-medium">#{i + 1} {topic.name}</span>
+                            <span className="text-violet-400 font-semibold">{topic.count} callers</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-xs py-4 text-center">No topic relationships mapped yet</p>
+                    )}
+                  </div>
+
+                  {/* Top Cities in Graph */}
+                  <div className="glass-card p-6">
+                    <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      Caller Distribution by City (LIVES_IN)
+                    </h3>
+                    {neo4jStats?.top_cities?.length > 0 ? (
+                      <div className="space-y-3">
+                        {neo4jStats.top_cities.map((city, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm py-1 border-b border-white/5 last:border-0">
+                            <span className="text-gray-200 font-medium">{city.name}</span>
+                            <span className="text-amber-400 font-semibold">{city.count} callers</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-xs py-4 text-center">No city relationships mapped yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* ─── Intent Distribution ─── */}
               <div
                 className="glass-card p-6"
-                style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '560ms' }}
+                style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '600ms' }}
               >
                 <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
