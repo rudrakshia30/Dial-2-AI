@@ -77,7 +77,7 @@ export default function KnowledgeGraph() {
               <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
-              
+
               {/* AutocompleteDropdown */}
               {matchingNodes.length > 0 && (
                 <div className="absolute top-full right-0 w-full mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20 max-h-48 overflow-y-auto">
@@ -129,8 +129,8 @@ export default function KnowledgeGraph() {
                         {selectedNode.type === 'Person'
                           ? `MATCH (p:Person {phone: "${selectedNode.id}"})\nRETURN p`
                           : selectedNode.type === 'City'
-                          ? `MATCH (c:City {name: "${selectedNode.name}"})<-[:LIVES_IN]-(p:Person)\nRETURN p.name`
-                          : `MATCH (t:Topic {name: "${selectedNode.name}"})<-[:INTERESTED_IN]-(p:Person)\nRETURN p.name`}
+                            ? `MATCH (c:City {name: "${selectedNode.name}"})<-[:LIVES_IN]-(p:Person)\nRETURN p.name`
+                            : `MATCH (t:Topic {name: "${selectedNode.name}"})<-[:INTERESTED_IN]-(p:Person)\nRETURN p.name`}
                       </pre>
                     </div>
                   </div>
