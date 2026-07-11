@@ -281,7 +281,37 @@ async def update_person_memory(phone: str, memory: dict) -> bool:
                     project=project,
                 )
 
-        logger.info("Memory updated for phone: %s", phone)
+            # --- 4. AuraDB Track: Create City nodes & LIVES_IN relationships ---
+            city = _clean(memory.get("city"))
+            if city:
+                city_cap = city.strip().capitalize()
+                await session.run(
+                    """
+                    MATCH (p:Person {phone: $phone})
+                    MERGE (c:City {name: $city})
+                    MERGE (p)-[:LIVES_IN]->(c)
+                    """,
+                    phone=phone,
+                    city=city_cap,
+                )
+
+            # --- 5. AuraDB Track: Create Topic nodes & INTERESTED_IN relationships ---
+            # Unify interests and projects as generic Topics for relationship-based queries
+            topics = list(set(interests + projects))
+            for topic in topics:
+                topic_clean = topic.strip()
+                if topic_clean:
+                    await session.run(
+                        """
+                        MATCH (p:Person {phone: $phone})
+                        MERGE (t:Topic {name: $topic})
+                        MERGE (p)-[:INTERESTED_IN]->(t)
+                        """,
+                        phone=phone,
+                        topic=topic_clean,
+                    )
+
+        logger.info("Memory updated in AuraDB for phone: %s", phone)
         return True
 
     except Exception as exc:
@@ -372,3 +402,198 @@ async def get_relevant_memory(phone: str) -> Optional[dict]:
     ])
 
     return person if has_data else None
+
+
+# ---------------------------------------------------------------------------
+# AuraDB Track Graph Queries
+# ---------------------------------------------------------------------------
+
+async def get_trending_topics_in_city(city: str) -> list[str]:
+    """
+    Get top 3 trending topics/interests in a given city based on other users' profiles.
+    Used to inject real-time context into the LLM system prompt.
+    """
+    driver = _get_driver()
+    if driver is None or not city:
+        return []
+    try:
+        async with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+            result = await session.run(
+                """
+                MATCH (c:City {name: $city})<-[:LIVES_IN]-(p:Person)-[:INTERESTED_IN]->(t:Topic)
+                RETURN t.name AS topic, count(p) AS popularity
+                ORDER BY popularity DESC
+                LIMIT 3
+                """,
+                city=city.strip().capitalize()
+            )
+            records = [r async for r in result]
+            return [record["topic"] for record in records]
+    except Exception as exc:
+        logger.error("get_trending_topics_in_city(%s) error: %s", city, exc)
+        return []
+
+
+async def get_related_topics(phone: str) -> list[str]:
+    """
+    Find topics that other people with similar interests have asked about.
+    Collaborative filtering recommendation query.
+    """
+    driver = _get_driver()
+    if driver is None or not phone:
+        return []
+    try:
+        async with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+            result = await session.run(
+                """
+                MATCH (p:Person {phone: $phone})-[:INTERESTED_IN]->(t:Topic)<-[:INTERESTED_IN]-(other:Person)-[:INTERESTED_IN]->(rec:Topic)
+                WHERE rec <> t AND NOT (p)-[:INTERESTED_IN]->(rec)
+                RETURN rec.name AS topic, count(other) AS strength
+                ORDER BY strength DESC
+                LIMIT 3
+                """,
+                phone=phone
+            )
+            records = [r async for r in result]
+            return [record["topic"] for record in records]
+    except Exception as exc:
+        logger.error("get_related_topics(%s) error: %s", phone, exc)
+        return []
+
+
+async def get_graph_analytics() -> dict:
+    """
+    Query Neo4j AuraDB directly to compute live statistics and counts for the dashboard.
+    """
+    driver = _get_driver()
+    if driver is None:
+        return {
+            "callers": 0,
+            "topics": 0,
+            "cities": 0,
+            "relationships": 0,
+            "top_topics": [],
+            "top_cities": []
+        }
+    try:
+        async with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+            # 1. Get Node & Relationship Counts
+            stats_result = await session.run(
+                """
+                CALL {
+                    MATCH (p:Person) RETURN count(p) AS callers
+                }
+                CALL {
+                    MATCH (t:Topic) RETURN count(t) AS topics
+                }
+                CALL {
+                    MATCH (c:City) RETURN count(c) AS cities
+                }
+                CALL {
+                    MATCH ()-[r]->() RETURN count(r) AS relationships
+                }
+                RETURN callers, topics, cities, relationships
+                """
+            )
+            stats_record = await stats_result.single()
+            
+            # 2. Get Top Topics
+            topics_result = await session.run(
+                """
+                MATCH (p:Person)-[:INTERESTED_IN]->(t:Topic)
+                RETURN t.name AS name, count(p) AS count
+                ORDER BY count DESC
+                LIMIT 5
+                """
+            )
+            topics_records = [r async for r in topics_result]
+            top_topics = [{"name": r["name"], "count": r["count"]} for r in topics_records]
+            
+            # 3. Get Callers by City
+            cities_result = await session.run(
+                """
+                MATCH (p:Person)-[:LIVES_IN]->(c:City)
+                RETURN c.name AS name, count(p) AS count
+                ORDER BY count DESC
+                LIMIT 5
+                """
+            )
+            cities_records = [r async for r in cities_result]
+            top_cities = [{"name": r["name"], "count": r["count"]} for r in cities_records]
+            
+            return {
+                "callers": stats_record["callers"] if stats_record else 0,
+                "topics": stats_record["topics"] if stats_record else 0,
+                "cities": stats_record["cities"] if stats_record else 0,
+                "relationships": stats_record["relationships"] if stats_record else 0,
+                "top_topics": top_topics,
+                "top_cities": top_cities
+            }
+    except Exception as exc:
+        logger.error("get_graph_analytics() error: %s", exc)
+        return {
+            "callers": 0,
+            "topics": 0,
+            "cities": 0,
+            "relationships": 0,
+            "top_topics": [],
+            "top_cities": []
+        }
+
+
+async def get_graph_data() -> dict:
+    """
+    Get raw node and relationship data from Neo4j to draw the network graph on the frontend.
+    """
+    driver = _get_driver()
+    if driver is None:
+        return {"nodes": [], "links": []}
+    try:
+        async with driver.session(database=os.getenv("NEO4J_DATABASE", "neo4j")) as session:
+            # Query all Persons and their relationships to Cities and Topics
+            result = await session.run(
+                """
+                MATCH (p:Person)
+                OPTIONAL MATCH (p)-[:LIVES_IN]->(c:City)
+                OPTIONAL MATCH (p)-[:INTERESTED_IN]->(t:Topic)
+                RETURN p.phone AS phone, p.name AS name, 
+                       c.name AS city, t.name AS topic
+                """
+            )
+            records = [r async for r in result]
+            
+            nodes_set = set()
+            nodes = []
+            links = []
+            
+            for r in records:
+                phone = r["phone"]
+                name = r["name"] or phone
+                city = r["city"]
+                topic = r["topic"]
+                
+                # Add Person node
+                if phone not in nodes_set:
+                    nodes.append({"id": phone, "type": "Person", "name": name})
+                    nodes_set.add(phone)
+                    
+                # Add City node & link
+                if city and city not in nodes_set:
+                    nodes.append({"id": city, "type": "City", "name": city})
+                    nodes_set.add(city)
+                if city:
+                    links.append({"source": phone, "target": city, "type": "LIVES_IN"})
+                    
+                # Add Topic node & link
+                if topic and topic not in nodes_set:
+                    nodes.append({"id": topic, "type": "Topic", "name": topic})
+                    nodes_set.add(topic)
+                if topic:
+                    links.append({"source": phone, "target": topic, "type": "INTERESTED_IN"})
+            
+            return {"nodes": nodes, "links": links}
+    except Exception as e:
+        logger.error("get_graph_data() error: %s", e)
+        return {"nodes": [], "links": []}
+
+
