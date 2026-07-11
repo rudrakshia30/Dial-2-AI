@@ -141,20 +141,21 @@ sequenceDiagram
 ## 🛠️ Tech Stack & Libraries
 | **Category** | **Purpose** | **Technologies Used** |
 |--------------|-------------|------------------------|
-| 🧠 **AI & Intelligence** | Speech-to-Text, Reasoning & Analytics | Grok STT, Grok 4.1 Fast, `openai` SDK (xAI) |
+| ⚙️ **Hosting & Management** | Platform App Engine & DB Orchestration | **Base44 Platform** |
+| 🧠 **AI & Intelligence** | Speech-to-Text, Reasoning & Analytics | Grok STT, Grok 4.1 Fast, `openai` SDK (xAI), Neo4j AuraDB Graph |
 | 🔊 **Voice Processing** | Text-to-Speech | Google TTS (`gTTS`), `FFmpeg` |
 | ⚙️ **Backend & APIs** | Server & API Handling | Python 3.12, `FastAPI`, `uvicorn`, `httpx`, `pydantic` |
 | 🔄 **Real-Time Communication** | Audio Streaming | `websockets` |
-| 🗄️ **Database** | Data & Conversation Storage | `sqlite3` |
+| 🗄️ **Database** | Data & Conversation Storage | `sqlite3`, Neo4j Graph DB |
 | 📞 **Telephony** | Calling & SMS Services | Exotel (Passthru Applets) |
-| 💻 **Frontend** | User Interface | `Next.js 14`, `React`, `TailwindCSS` |
+| 💻 **Frontend** | User Interface | `Next.js 14`, `React`, `TailwindCSS` (Base44 Orchestrated) |
 | 📊 **Analytics & Visualization** | Dashboard Charts | `Recharts` |
 | 🎨 **Icons & UI Components** | Icons & UI Elements | `Lucide-React` |
 ---
 
 ## 🏗️ System Architecture
 
-We built a highly scalable, async event-driven architecture using Python FastAPI, Next.js, and WebSockets.
+We built a highly scalable, async event-driven architecture using Python FastAPI, Next.js, and WebSockets, fully integrated with and managed by the **Base44 Platform**.
 
 ```mermaid
 graph TD
@@ -171,10 +172,11 @@ graph TD
     I -->|"Generates Response"| J["Google TTS"]
     J -->|"PCM Audio Chunk"| B
     B -->|"Plays Audio"| A
-    C -->|"Post-Call Analysis"| K[("SQLite Database")]
+    C -->|"Post-Call Analysis"| K[("SQLite Database / Neo4j Graph")]
     C -->|"Sends Summary"| L["Exotel SMS API"]
     L --> A
-    K --> M["Next.js Dashboard"]
+    K --> M["Base44 Dial2AI Console (Next.js)"]
+    M -->|"CRUD Configuration Updates"| C
 ```
 
 
