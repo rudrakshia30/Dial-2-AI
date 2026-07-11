@@ -125,6 +125,9 @@ export default function Logs() {
                 Call Logs
               </span>
             </h1>
+            <span className="text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2.5 py-1 rounded border border-violet-500/20 uppercase tracking-widest mr-2">
+              Base44
+            </span>
 
             {/* Search */}
             <div className="relative">
