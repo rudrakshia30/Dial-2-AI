@@ -39,13 +39,13 @@ Rules:
 3. Never greet again: do NOT say Namaste, Hello, Hi, or Namaskar in your answers. Greeting happens once at call start only.
 4. Keep replies very short, 1-2 sentences maximum. This is a phone call.
 5. Speak naturally. Do not use asterisks, bullets, markdown, emojis, or special characters.
-6. If you see [WEATHER:...], [SCHEME:...], [NEWS:...], [MANDI:...], or [FACT:...] tags, use that exact verified data in your answer. Never invent numbers, names, or facts.
-7. You can help with general knowledge, math, health, education, jobs, technology, cooking, weather, crop prices, government schemes, farming, news, and more.
+6. If you see [WEATHER:...], [SCHEME:...], [NEWS:...], or [FACT:...] tags, use that exact verified data in your answer. Never invent numbers, names, or facts.
+7. You can help with general knowledge, math, health, education, jobs, technology, cooking, weather, government schemes, news, and more.
 8. Never make up real-time information. If verified data is unavailable, say so briefly in the user's language.
 9. Always prefer honesty over guessing."""
 
 
-def build_memory_prompt(memory: dict) -> str:
+def build_memory_prompt(memory: dict, trending_topics: list = None) -> str:
     """
     Format a caller's Neo4j profile into a concise memory block that is
     prepended to the system prompt.
@@ -53,46 +53,51 @@ def build_memory_prompt(memory: dict) -> str:
     The AI is instructed to use this information naturally — not to recite
     it verbatim or repeat it unnecessarily.
     """
-    if not memory:
+    if not memory and not trending_topics:
         return ""
 
-    lines = ["\n\n[CALLER MEMORY — use naturally, do not repeat everything]",
-             "Caller Profile:"]
+    lines = ["\n\n[CALLER CONTEXT & MEMORY — use naturally, do not repeat everything]"]
 
-    if memory.get("name"):
-        lines.append(f"  Name: {memory['name']}")
-    if memory.get("age"):
-        lines.append(f"  Age: {memory['age']}")
-    if memory.get("city"):
-        lines.append(f"  City: {memory['city']}")
-    if memory.get("college"):
-        lines.append(f"  College: {memory['college']}")
-    if memory.get("profession"):
-        lines.append(f"  Profession: {memory['profession']}")
-    if memory.get("preferred_language"):
-        lines.append(f"  Preferred Language: {memory['preferred_language']}")
+    if memory:
+        lines.append("Caller Profile:")
+        if memory.get("name"):
+            lines.append(f"  Name: {memory['name']}")
+        if memory.get("age"):
+            lines.append(f"  Age: {memory['age']}")
+        if memory.get("city"):
+            lines.append(f"  City: {memory['city']}")
+        if memory.get("college"):
+            lines.append(f"  College: {memory['college']}")
+        if memory.get("profession"):
+            lines.append(f"  Profession: {memory['profession']}")
+        if memory.get("preferred_language"):
+            lines.append(f"  Preferred Language: {memory['preferred_language']}")
 
-    if memory.get("interests"):
-        lines.append(f"  Known Interests: {', '.join(memory['interests'])}")
+        if memory.get("interests"):
+            lines.append(f"  Known Interests/Topics: {', '.join(memory['interests'])}")
 
-    if memory.get("projects"):
-        lines.append(f"  Projects: {', '.join(memory['projects'])}")
+        if memory.get("projects"):
+            lines.append(f"  Projects: {', '.join(memory['projects'])}")
 
-    if memory.get("summary"):
-        lines.append(f"  Profile Summary: {memory['summary']}")
+        if memory.get("summary"):
+            lines.append(f"  Profile Summary: {memory['summary']}")
 
-    recent = memory.get("recent_conversations", [])
-    if recent:
-        lines.append("  Previous Call Summaries (most recent first):")
-        for conv in recent[:3]:  # inject max 3 to keep prompt short
-            ts = conv.get("timestamp", "")[:10]  # date only
-            s  = conv.get("summary", "")
-            if s:
-                lines.append(f"    - [{ts}] {s}")
+        recent = memory.get("recent_conversations", [])
+        if recent:
+            lines.append("  Previous Call Summaries (most recent first):")
+            for conv in recent[:3]:  # inject max 3 to keep prompt short
+                ts = conv.get("timestamp", "")[:10]  # date only
+                s  = conv.get("summary", "")
+                if s:
+                    lines.append(f"    - [{ts}] {s}")
+
+    if trending_topics:
+        city_name = memory.get("city") if memory else "their area"
+        lines.append(f"  Trending topics/interests among other callers in {city_name}: {', '.join(trending_topics)}")
 
     lines.append(
-        "Instructions: Use this memory naturally in conversation. "
-        "Only mention a memory when it is clearly relevant. "
+        "Instructions: Use this memory/context naturally in conversation. "
+        "Only mention a memory or trending topic when it is clearly relevant. "
         "Do not recite the profile. Do not say 'according to our records'."
     )
 
@@ -352,11 +357,12 @@ def _build_messages(
     history: list = None,
     context: str = "",
     caller_memory: dict = None,
+    trending_topics: list = None,
 ):
     # Prepend caller memory block to the system prompt when available
     system_content = SYSTEM_PROMPT
-    if caller_memory:
-        system_content = SYSTEM_PROMPT + build_memory_prompt(caller_memory)
+    if caller_memory or trending_topics:
+        system_content = SYSTEM_PROMPT + build_memory_prompt(caller_memory, trending_topics=trending_topics)
 
     messages = [{"role": "system", "content": system_content}]
     if history:
@@ -371,6 +377,7 @@ async def get_ai_reply(
     history: list = None,
     response_language: str | None = None,
     caller_memory: dict = None,
+    trending_topics: list = None,
 ):
 
     try:
@@ -399,7 +406,7 @@ async def get_ai_reply(
             )
             context += "\n[NEWS: " + news_result + "]"
 
-        messages = _build_messages(question, history, context, caller_memory=caller_memory)
+        messages = _build_messages(question, history, context, caller_memory=caller_memory, trending_topics=trending_topics)
 
         # Retry up to 2 times for rate-limit errors
         last_err = None
