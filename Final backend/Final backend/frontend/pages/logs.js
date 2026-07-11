@@ -210,9 +210,8 @@ export default function Logs() {
                           <tr
                             key={call.id || idx}
                             onClick={() => setDetailCall(call)}
-                            className={`border-b border-white/[0.03] cursor-pointer transition-colors hover:bg-white/[0.04] ${
-                              idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'
-                            }`}
+                            className={`border-b border-white/[0.03] cursor-pointer transition-colors hover:bg-white/[0.04] ${idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'
+                              }`}
                           >
                             <td className="px-5 py-3.5 text-gray-200 font-medium whitespace-nowrap">
                               {call.customer_name || '—'}
