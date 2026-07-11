@@ -114,10 +114,10 @@ export default function Analytics() {
   /* derived data */
   const sentimentData = stats
     ? Object.entries(stats.sentiment_dist || {}).map(([name, value]) => ({
-        name,
-        value,
-        fill: SENTIMENT_COLORS[name] || '#6b7280',
-      }))
+      name,
+      value,
+      fill: SENTIMENT_COLORS[name] || '#6b7280',
+    }))
     : [];
 
   const sentimentTotal = sentimentData.reduce((s, d) => s + d.value, 0);
