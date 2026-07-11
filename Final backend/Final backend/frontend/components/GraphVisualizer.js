@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '../lib/api';
 
-export default function GraphVisualizer() {
+export default function GraphVisualizer({ onSelectNode, selectedNodeId }) {
   const [data, setData] = useState({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
   const [draggedNode, setDraggedNode] = useState(null);
@@ -11,8 +11,8 @@ export default function GraphVisualizer() {
   const nodesRef = useRef([]);
   const linksRef = useRef([]);
 
-  const width = 600;
-  const height = 400;
+  const width = 800;
+  const height = 500;
 
   // Colors based on theme
   const NODE_COLORS = {
@@ -33,8 +33,8 @@ export default function GraphVisualizer() {
         // Initialize positions randomly near the center
         const nodes = res.nodes.map((node) => ({
           ...node,
-          x: width / 2 + (Math.random() - 0.5) * 150,
-          y: height / 2 + (Math.random() - 0.5) * 150,
+          x: width / 2 + (Math.random() - 0.5) * 200,
+          y: height / 2 + (Math.random() - 0.5) * 200,
           vx: 0,
           vy: 0,
         }));
@@ -67,10 +67,10 @@ export default function GraphVisualizer() {
         return;
       }
 
-      const chargeStrength = -400; // Repulsion force
-      const linkStrength = 0.05;   // Link pull force
-      const gravityStrength = 0.03; // Center pull force
-      const damping = 0.85;        // Velocity friction
+      const chargeStrength = -500; // Repulsion force
+      const linkStrength = 0.06;   // Link pull force
+      const gravityStrength = 0.04; // Center pull force
+      const damping = 0.83;        // Velocity friction
 
       // 1. Repulsion between all nodes (N-Body Charge)
       for (let i = 0; i < nodes.length; i++) {
@@ -82,7 +82,7 @@ export default function GraphVisualizer() {
           const distSq = dx * dx + dy * dy + 0.1;
           const dist = Math.sqrt(distSq);
 
-          if (dist < 250) {
+          if (dist < 300) {
             const force = chargeStrength / distSq;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
@@ -110,7 +110,7 @@ export default function GraphVisualizer() {
         const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
 
         // Desired length is around 90px
-        const targetLen = 95;
+        const targetLen = 100;
         const force = (dist - targetLen) * linkStrength;
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
@@ -168,6 +168,9 @@ export default function GraphVisualizer() {
   // Dragging event handlers
   const handleMouseDown = (e, node) => {
     setDraggedNode(node);
+    if (onSelectNode) {
+      onSelectNode(node);
+    }
   };
 
   const handleMouseMove = (e) => {
@@ -242,12 +245,24 @@ export default function GraphVisualizer() {
             transform={`translate(${node.x}, ${node.y})`}
             onMouseDown={(e) => handleMouseDown(e, node)}
           >
+            {selectedNodeId === node.id && (
+              <circle
+                r={node.type === 'Person' ? 15 : 13}
+                fill="none"
+                stroke={NODE_COLORS[node.type]}
+                strokeWidth={1.5}
+                className="animate-ping"
+                style={{ opacity: 0.8 }}
+              />
+            )}
             <circle
               r={node.type === 'Person' ? 9 : 7}
               fill={NODE_COLORS[node.type] || '#fff'}
-              className="transition-transform duration-200 hover:scale-125"
+              className="transition-transform duration-200 hover:scale-125 cursor-pointer"
               style={{
                 filter: `drop-shadow(0 0 4px ${NODE_COLORS[node.type]}40)`,
+                stroke: selectedNodeId === node.id ? '#fff' : 'none',
+                strokeWidth: selectedNodeId === node.id ? 1.5 : 0,
               }}
             />
             <text
