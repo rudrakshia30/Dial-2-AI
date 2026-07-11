@@ -157,13 +157,18 @@ export default function Analytics() {
 
         <main className="flex-1 ml-64 p-8 overflow-y-auto">
           {/* Header */}
-          <div className="mb-8" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
-            <h1 className="text-3xl font-extrabold tracking-tight">
-              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
-                Analytics
-              </span>
-            </h1>
-            <p className="text-gray-400 mt-1 text-sm">Deep dive into your call data and performance metrics</p>
+          <div className="mb-8 flex items-end justify-between" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+                  Analytics
+                </span>
+              </h1>
+              <p className="text-gray-400 mt-1 text-sm">Deep dive into your call data and performance metrics</p>
+            </div>
+            <span className="text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2.5 py-1 rounded border border-violet-500/20 uppercase tracking-widest">
+              Powered by Base44
+            </span>
           </div>
 
           {loading && <DashboardSkeleton />}
