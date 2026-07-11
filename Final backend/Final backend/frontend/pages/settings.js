@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { apiFetch } from '../lib/api';
 
@@ -58,6 +58,24 @@ const configItems = [
       </svg>
     ),
   },
+  {
+    label: 'Graph Database',
+    value: 'Neo4j AuraDB',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Platform',
+    value: 'Base44',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 01-1.125-1.125v-3.75zM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-8.25zM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-2.25z" />
+      </svg>
+    ),
+  },
 ];
 
 /* ─── requirements ─── */
@@ -81,9 +99,36 @@ const steps = [
   { title: 'Data Stored', desc: 'Results saved to database with full transcript' },
 ];
 
+/* ─── Base44 mock roles ─── */
+const roles = [
+  { name: 'Admin', desc: 'Full system access, configuration management', color: 'cyan' },
+  { name: 'Analyst', desc: 'View analytics, logs, and knowledge graph', color: 'violet' },
+  { name: 'Viewer', desc: 'Read-only dashboard access', color: 'amber' },
+];
+
 export default function Settings() {
-  const [healthStatus, setHealthStatus] = useState(null); // 'ok' | 'error' | null
+  const [healthStatus, setHealthStatus] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [neo4jStatus, setNeo4jStatus] = useState(null);
+  const [neo4jLoading, setNeo4jLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [activeRole, setActiveRole] = useState('Admin');
+  const [crudItems, setCrudItems] = useState([
+    { id: 1, key: 'max_call_duration', value: '300', desc: 'Maximum call duration in seconds' },
+    { id: 2, key: 'greeting_language', value: 'auto', desc: 'Default greeting language' },
+    { id: 3, key: 'sentiment_threshold', value: '0.65', desc: 'Threshold for positive sentiment' },
+  ]);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
+  // Toast helpers
+  const showToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  };
 
   const checkHealth = async () => {
     setHealthLoading(true);
@@ -91,11 +136,56 @@ export default function Settings() {
     try {
       const data = await apiFetch('/ping');
       setHealthStatus(data.status === 'ok' ? 'ok' : 'error');
+      showToast(data.status === 'ok' ? 'Backend is healthy' : 'Backend check failed', data.status === 'ok' ? 'success' : 'error');
     } catch {
       setHealthStatus('error');
+      showToast('Could not reach backend', 'error');
     } finally {
       setHealthLoading(false);
     }
+  };
+
+  const checkNeo4j = async () => {
+    setNeo4jLoading(true);
+    setNeo4jStatus(null);
+    try {
+      const data = await apiFetch('/api/neo4j/stats');
+      setNeo4jStatus(data && data.total_nodes !== undefined ? 'ok' : 'error');
+      showToast(`Neo4j: ${data.total_nodes} nodes, ${data.total_relationships} relationships`);
+    } catch {
+      setNeo4jStatus('error');
+      showToast('Could not reach Neo4j AuraDB', 'error');
+    } finally {
+      setNeo4jLoading(false);
+    }
+  };
+
+  // CRUD handlers
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditValue(item.value);
+  };
+
+  const saveEdit = (id) => {
+    setCrudItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, value: editValue } : item))
+    );
+    setEditingId(null);
+    showToast('Configuration updated');
+  };
+
+  const deleteItem = (id) => {
+    setCrudItems((prev) => prev.filter((item) => item.id !== id));
+    showToast('Configuration removed', 'warning');
+  };
+
+  const addItem = () => {
+    const newId = Math.max(0, ...crudItems.map((i) => i.id)) + 1;
+    setCrudItems((prev) => [
+      ...prev,
+      { id: newId, key: `custom_param_${newId}`, value: '0', desc: 'Custom parameter' },
+    ]);
+    showToast('New configuration added');
   };
 
   return (
@@ -276,6 +366,227 @@ export default function Settings() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* ─── Base44 Features ─── */}
+          <div className="mt-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                Base44 Platform Features
+              </h2>
+              <span className="text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded border border-violet-500/20 uppercase tracking-widest">
+                Enterprise
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* Role-Based Access Control */}
+              <div className="glass-card p-6" style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '500ms' }}>
+                <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  Role-Based Access
+                </h3>
+                <div className="space-y-3">
+                  {roles.map((role) => (
+                    <button
+                      key={role.name}
+                      onClick={() => {
+                        setActiveRole(role.name);
+                        showToast(`Switched to ${role.name} role`);
+                      }}
+                      className={`w-full flex items-center gap-4 p-3.5 rounded-xl border transition ${
+                        activeRole === role.name
+                          ? `bg-${role.color}-500/10 border-${role.color}-500/30`
+                          : 'bg-gray-800/40 border-white/[0.03] hover:border-white/[0.08]'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                        activeRole === role.name
+                          ? `bg-${role.color}-500/20 text-${role.color}-400`
+                          : 'bg-gray-700/40 text-gray-500'
+                      }`}>
+                        {role.name[0]}
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className={`text-sm font-semibold ${activeRole === role.name ? 'text-white' : 'text-gray-300'}`}>{role.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{role.desc}</p>
+                      </div>
+                      {activeRole === role.name && (
+                        <span className={`text-[10px] font-bold bg-${role.color}-500/20 text-${role.color}-400 px-2 py-0.5 rounded-full uppercase`}>
+                          Active
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Neo4j Health Check */}
+              <div className="glass-card p-6" style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '600ms' }}>
+                <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-400" />
+                  Neo4j AuraDB Health
+                </h3>
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={checkNeo4j}
+                    disabled={neo4jLoading}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-sm font-semibold shadow-lg shadow-orange-500/20 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {neo4jLoading ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Checking…
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                        </svg>
+                        Test Graph DB
+                      </>
+                    )}
+                  </button>
+
+                  {neo4jStatus && (
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <span className={`block w-4 h-4 rounded-full ${neo4jStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                        <span className={`absolute inset-0 rounded-full ${neo4jStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                          style={{ animation: 'pulse-ring 1.5s ease-out infinite' }} />
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold ${neo4jStatus === 'ok' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {neo4jStatus === 'ok' ? 'AuraDB Connected' : 'Connection Failed'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {neo4jStatus === 'ok' ? 'Knowledge graph is accessible' : 'Could not reach Neo4j AuraDB'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* CRUD Configuration Table */}
+            <div className="glass-card p-6" style={{ animation: 'fadeInUp 0.6s ease-out both', animationDelay: '700ms' }}>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-violet-400" />
+                  Base44 CRUD Configuration
+                </h3>
+                <button
+                  onClick={addItem}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-semibold shadow-lg shadow-violet-500/20 transition-all duration-200 flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Add Parameter
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Key</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Value</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {crudItems.map((item) => (
+                      <tr key={item.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition">
+                        <td className="px-4 py-3 font-mono text-xs text-cyan-400">{item.key}</td>
+                        <td className="px-4 py-3">
+                          {editingId === item.id ? (
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && saveEdit(item.id)}
+                              className="w-24 px-2 py-1 rounded bg-gray-800 border border-cyan-500/30 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-200 font-semibold">{item.value}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{item.desc}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {editingId === item.id ? (
+                              <button
+                                onClick={() => saveEdit(item.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-[10px] font-bold hover:bg-emerald-500/30 transition"
+                              >
+                                Save
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => startEdit(item)}
+                                className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold hover:bg-blue-500/30 transition"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteItem(item.id)}
+                              className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 text-[10px] font-bold hover:bg-rose-500/30 transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {crudItems.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-center py-8 text-gray-500 text-sm">No configurations. Click "Add Parameter" to create one.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Toast Notifications ─── */}
+          <div className="fixed bottom-6 right-6 z-50 space-y-3" style={{ pointerEvents: 'none' }}>
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className={`flex items-center gap-3 px-5 py-3 rounded-xl border shadow-2xl backdrop-blur-xl text-sm font-semibold pointer-events-auto ${
+                  toast.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : toast.type === 'warning'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                }`}
+                style={{ animation: 'fadeInUp 0.3s ease-out both' }}
+              >
+                {toast.type === 'success' ? (
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                ) : toast.type === 'warning' ? (
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+                {toast.message}
+              </div>
+            ))}
           </div>
         </main>
       </div>
