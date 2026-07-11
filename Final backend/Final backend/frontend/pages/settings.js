@@ -282,14 +282,12 @@ export default function Settings() {
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <span
-                          className={`block w-4 h-4 rounded-full ${
-                            healthStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'
-                          }`}
+                          className={`block w-4 h-4 rounded-full ${healthStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'
+                            }`}
                         />
                         <span
-                          className={`absolute inset-0 rounded-full ${
-                            healthStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'
-                          }`}
+                          className={`absolute inset-0 rounded-full ${healthStatus === 'ok' ? 'bg-emerald-400' : 'bg-rose-400'
+                            }`}
                           style={{ animation: 'pulse-ring 1.5s ease-out infinite' }}
                         />
                       </div>
@@ -315,9 +313,8 @@ export default function Settings() {
                 <div className="space-y-2.5">
                   {requirements.map((req) => (
                     <div key={req.label} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-800/40 transition">
-                      <div className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                        req.status ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                      }`}>
+                      <div className={`flex items-center justify-center w-6 h-6 rounded-full ${req.status ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                        }`}>
                         {req.status ? (
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -394,17 +391,15 @@ export default function Settings() {
                         setActiveRole(role.name);
                         showToast(`Switched to ${role.name} role`);
                       }}
-                      className={`w-full flex items-center gap-4 p-3.5 rounded-xl border transition ${
-                        activeRole === role.name
+                      className={`w-full flex items-center gap-4 p-3.5 rounded-xl border transition ${activeRole === role.name
                           ? `bg-${role.color}-500/10 border-${role.color}-500/30`
                           : 'bg-gray-800/40 border-white/[0.03] hover:border-white/[0.08]'
-                      }`}
+                        }`}
                     >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
-                        activeRole === role.name
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${activeRole === role.name
                           ? `bg-${role.color}-500/20 text-${role.color}-400`
                           : 'bg-gray-700/40 text-gray-500'
-                      }`}>
+                        }`}>
                         {role.name[0]}
                       </div>
                       <div className="text-left flex-1">
@@ -562,13 +557,12 @@ export default function Settings() {
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`flex items-center gap-3 px-5 py-3 rounded-xl border shadow-2xl backdrop-blur-xl text-sm font-semibold pointer-events-auto ${
-                  toast.type === 'success'
+                className={`flex items-center gap-3 px-5 py-3 rounded-xl border shadow-2xl backdrop-blur-xl text-sm font-semibold pointer-events-auto ${toast.type === 'success'
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                     : toast.type === 'warning'
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                }`}
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                  }`}
                 style={{ animation: 'fadeInUp 0.3s ease-out both' }}
               >
                 {toast.type === 'success' ? (
