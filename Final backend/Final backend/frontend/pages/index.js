@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
 import Sidebar from '../components/Sidebar';
 import StatCard from '../components/StatCard';
 import CallTable from '../components/CallTable';
+import LandingExperience from '../components/LandingExperience';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
 import { apiFetch } from '../lib/api';
 import {
@@ -68,10 +70,32 @@ function FadeIn({ delay = 0, children, className = '' }) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [launched, setLaunched] = useState(false);
   const [stats, setStats] = useState(null);
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Synchronize launch state with sessionStorage
+  useEffect(() => {
+    const syncLaunchState = () => {
+      const isLaunched = sessionStorage.getItem('base44_launched') === 'true';
+      setLaunched(isLaunched);
+    };
+    
+    syncLaunchState();
+    
+    router.events.on('routeChangeComplete', syncLaunchState);
+    return () => {
+      router.events.off('routeChangeComplete', syncLaunchState);
+    };
+  }, [router]);
+
+  const handleLaunch = () => {
+    sessionStorage.setItem('base44_launched', 'true');
+    setLaunched(true);
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -90,10 +114,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    if (launched) {
+      fetchData();
+      const interval = setInterval(fetchData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchData, launched]);
 
   /* ─── sentiment helpers ─── */
   const sentimentTotal = stats
@@ -111,6 +137,10 @@ export default function Dashboard() {
   const maxIntentCount = stats?.top_intents?.length
     ? Math.max(...stats.top_intents.map((i) => i.count))
     : 1;
+
+  if (!launched) {
+    return <LandingExperience onLaunchDashboard={handleLaunch} />;
+  }
 
   return (
     <>
@@ -143,15 +173,20 @@ export default function Dashboard() {
         <main className="flex-1 ml-64 p-8 overflow-y-auto">
           {/* Header */}
           <FadeIn>
-            <div className="mb-8">
-              <h1 className="text-3xl font-extrabold tracking-tight">
-                <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
-                  Dashboard
-                </span>
-              </h1>
-              <p className="text-gray-400 mt-1 text-sm">
-                Real-time overview of your missed call AI system
-              </p>
+            <div className="mb-8 flex items-end justify-between">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight">
+                  <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+                    Dial2AI Dashboard
+                  </span>
+                </h1>
+                <p className="text-gray-400 mt-1 text-sm">
+                  Real-time overview of your AI voice call gateway
+                </p>
+              </div>
+              <span className="text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2.5 py-1 rounded border border-violet-500/20 uppercase tracking-widest">
+                Powered by Base44
+              </span>
             </div>
           </FadeIn>
 
