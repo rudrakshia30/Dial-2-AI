@@ -7,6 +7,18 @@ module.exports = {
     './pages/**/*.{js,jsx}',
     './components/**/*.{js,jsx}',
   ],
+  safelist: [
+    // Dynamic role colors used in settings page
+    'bg-cyan-500/10', 'bg-cyan-500/20', 'bg-cyan-500/30',
+    'border-cyan-500/30',
+    'text-cyan-400',
+    'bg-violet-500/10', 'bg-violet-500/20', 'bg-violet-500/30',
+    'border-violet-500/30',
+    'text-violet-400',
+    'bg-amber-500/10', 'bg-amber-500/20', 'bg-amber-500/30',
+    'border-amber-500/30',
+    'text-amber-400',
+  ],
   theme: {
     extend: {
       fontFamily: {
