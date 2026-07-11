@@ -553,11 +553,22 @@ async def websocket_endpoint(websocket: WebSocket):
                         elif correction.needs_clarification and correction.clarification_question:
                             reply = correction.clarification_question
                         else:
+                            trending_topics = []
+                            if caller_memory and caller_memory.get("city"):
+                                try:
+                                    from app.services.neo4j_service import get_trending_topics_in_city
+                                    trending_topics = await get_trending_topics_in_city(caller_memory["city"])
+                                    if trending_topics:
+                                        print(f"📊 Live AuraDB Query: Found trending topics in {caller_memory['city']}: {trending_topics}")
+                                except Exception as e:
+                                    print(f"Failed to query trending topics from Neo4j (non-fatal): {e}")
+
                             reply = await get_ai_reply(
                                 text,
                                 conversation_history,
                                 response_language=correction.detected_language,
                                 caller_memory=caller_memory,
+                                trending_topics=trending_topics,
                             )
 
                             conversation_history.append(
@@ -779,16 +790,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 lead_json=_str(lead_json_str, "{}")
             )
             
-            # SMS follow up
+            # WhatsApp follow up (with SMS fallback)
             if phone_to_use and phone_to_use != "unknown" and phone_to_use != "streaming_caller":
-                print(f"Sending SMS follow-up to {phone_to_use}...")
-                # sms_body = format_sms_history(conversation_history)
-                await send_sms(
-                    phone_to_use,
-                    summary_text
-                )
+                print(f"Sending WhatsApp transcript to {phone_to_use}...")
+                try:
+                    from app.services.whatsapp import send_whatsapp_transcript
+                    wa_sent = await send_whatsapp_transcript(
+                        phone=phone_to_use,
+                        conversation_history=conversation_history,
+                        summary_text=summary_text
+                    )
+                    if not wa_sent:
+                        print("WhatsApp delivery failed. Falling back to SMS...")
+                        await send_sms(phone_to_use, summary_text)
+                except Exception as wa_err:
+                    print(f"Error during WhatsApp sending: {wa_err}. Falling back to SMS...")
+                    await send_sms(phone_to_use, summary_text)
             else:
-                print("Caller number unknown. Skipping SMS sending.")
+                print("Caller number unknown. Skipping WhatsApp/SMS sending.")
+
 
             # ----------------------------------------------------------------
             # Neo4j persistent memory — extract facts & save conversation
