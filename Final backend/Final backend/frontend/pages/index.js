@@ -83,9 +83,9 @@ export default function Dashboard() {
       const isLaunched = sessionStorage.getItem('base44_launched') === 'true';
       setLaunched(isLaunched);
     };
-    
+
     syncLaunchState();
-    
+
     router.events.on('routeChangeComplete', syncLaunchState);
     return () => {
       router.events.off('routeChangeComplete', syncLaunchState);
@@ -124,8 +124,8 @@ export default function Dashboard() {
   /* ─── sentiment helpers ─── */
   const sentimentTotal = stats
     ? (stats.sentiment_dist?.Positive || 0) +
-      (stats.sentiment_dist?.Neutral || 0) +
-      (stats.sentiment_dist?.Negative || 0)
+    (stats.sentiment_dist?.Neutral || 0) +
+    (stats.sentiment_dist?.Negative || 0)
     : 0;
 
   const sentimentPct = (key) =>
