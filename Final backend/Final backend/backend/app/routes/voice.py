@@ -138,6 +138,18 @@ async def api_stats():
     return get_stats()
 
 
+@router.get("/api/neo4j/stats")
+async def api_neo4j_stats():
+    from app.services.neo4j_service import get_graph_analytics
+    return await get_graph_analytics()
+
+
+@router.get("/api/neo4j/graph")
+async def api_neo4j_graph():
+    from app.services.neo4j_service import get_graph_data
+    return await get_graph_data()
+
+
 @router.get("/api/logs")
 async def api_logs():
     from app.utils.db import get_logs
