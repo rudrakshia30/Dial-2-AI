@@ -56,6 +56,11 @@ async def shutdown():
     await close_neo4j()
 
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Dial2AI Voice Backend"}
+
+
 @app.get("/ping")
 async def ping():
     return {"status": "ok"}
