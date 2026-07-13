@@ -168,24 +168,24 @@ export default function Dashboard() {
         }
       `}</style>
 
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
+      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white overflow-x-hidden">
         <Sidebar />
 
         <main className="flex-1 ml-0 lg:ml-64 p-4 pt-16 lg:pt-8 lg:p-8 overflow-y-auto">
           {/* Header */}
           <FadeIn>
-            <div className="mb-8 flex items-end justify-between">
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                   <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
                     Dial2AI Dashboard
                   </span>
                 </h1>
-                <p className="text-gray-400 mt-1 text-sm">
+                <p className="text-gray-400 mt-1 text-xs sm:text-sm">
                   Real-time overview of your AI voice call gateway
                 </p>
               </div>
-              <span className="text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2.5 py-1 rounded border border-violet-500/20 uppercase tracking-widest">
+              <span className="self-start sm:self-auto text-[10px] font-bold bg-violet-500/10 text-violet-400 px-2.5 py-1 rounded border border-violet-500/20 uppercase tracking-widest">
                 Powered by Base44
               </span>
             </div>
@@ -272,8 +272,8 @@ export default function Dashboard() {
               {/* ─── Charts Row ─── */}
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
                 {/* Calls Per Hour Chart */}
-                <FadeIn delay={480} className="xl:col-span-2">
-                  <div className="glass-card p-6">
+                <FadeIn delay={480} className="xl:col-span-2 min-w-0">
+                  <div className="glass-card p-4 sm:p-6 min-w-0 w-full overflow-hidden">
                     <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-cyan-400" />
                       Calls Per Hour
@@ -317,8 +317,8 @@ export default function Dashboard() {
                 </FadeIn>
 
                 {/* Sentiment Distribution */}
-                <FadeIn delay={560}>
-                  <div className="glass-card p-6 flex flex-col">
+                <FadeIn delay={560} className="min-w-0">
+                  <div className="glass-card p-4 sm:p-6 flex flex-col min-w-0 w-full overflow-hidden">
                     <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-violet-400" />
                       Sentiment Distribution

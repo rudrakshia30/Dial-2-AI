@@ -207,18 +207,18 @@ export default function Settings() {
         }
       `}</style>
 
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
+      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white overflow-x-hidden">
         <Sidebar />
 
         <main className="flex-1 ml-0 lg:ml-64 p-4 pt-16 lg:pt-8 lg:p-8 overflow-y-auto">
           {/* Header */}
           <div className="mb-8" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
-            <h1 className="text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
                 Settings
               </span>
             </h1>
-            <p className="text-gray-400 mt-1 text-sm">System configuration and health monitoring</p>
+            <p className="text-gray-400 mt-1 text-xs sm:text-sm">System configuration and health monitoring</p>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

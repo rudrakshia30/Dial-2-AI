@@ -50,19 +50,19 @@ export default function KnowledgeGraph() {
         }
       `}</style>
 
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
+      <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white overflow-x-hidden">
         <Sidebar />
 
         <main className="flex-1 ml-0 lg:ml-64 p-4 pt-16 lg:pt-8 lg:p-8 overflow-y-auto" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                 <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
                   Knowledge Graph
                 </span>
               </h1>
-              <p className="text-gray-400 mt-1 text-sm">Explore live caller-topic relationship maps on Neo4j AuraDB</p>
+              <p className="text-gray-400 mt-1 text-xs sm:text-sm">Explore live caller-topic relationship maps on Neo4j AuraDB</p>
             </div>
 
             {/* Node Search Bar */}
