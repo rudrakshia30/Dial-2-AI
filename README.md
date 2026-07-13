@@ -311,7 +311,7 @@ NEWS_API_KEY=
 ### Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/Dial2AI.git
+git clone https://github.com/rudrakshia30/Dial-2-AI
 
 cd Dial2AI
 ```
