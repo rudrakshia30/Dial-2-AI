@@ -210,7 +210,7 @@ export default function Settings() {
       <div className="flex min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
         <Sidebar />
 
-        <main className="flex-1 ml-64 p-8 overflow-y-auto">
+        <main className="flex-1 ml-0 lg:ml-64 p-4 pt-16 lg:pt-8 lg:p-8 overflow-y-auto">
           {/* Header */}
           <div className="mb-8" style={{ animation: 'fadeInUp 0.5s ease-out' }}>
             <h1 className="text-3xl font-extrabold tracking-tight">
