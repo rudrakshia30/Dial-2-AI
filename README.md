@@ -76,8 +76,8 @@ Dial2AI converts a regular phone call into a natural conversation with an AI ass
 
 ## Team Members
 
-- **Prabhav Agrawal** — Backend, AI Pipeline, Voice Processing
-- **Rudrakshi Agarwal** — Dashboard, Frontend, System Design
+- **Prabhav Agrawal** 
+- **Rudrakshi Agarwal**
 
 ---
 
@@ -237,7 +237,6 @@ Our FastAPI backend is deployed on **Render**, providing reliable cloud hosting 
 - ✅ Noise gate for telecom static
 - ✅ Hold music during AI processing
 - ✅ Dashboard with analytics and transcripts
-- ✅ SMS summary generation
 - ✅ Real-time WebSocket streaming
 
 ---
@@ -270,8 +269,8 @@ Coming Soon
 
 # ✅ Tasks & Bonus Checklist
 
-- [ ] All team members completed the mandatory social task
-- [ ] Bonus Task 1 – Badge sharing
+- [x] All team members completed the mandatory social task
+- [x] Bonus Task 1 – Badge sharing
 - [x] Bonus Task 2 – Blog/Article
 
 ---
