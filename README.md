@@ -1,319 +1,401 @@
-<div align="center">
-  <img src="https://img.shields.io/badge/HackIndia-Vibe_Coding_2026-blue?style=for-the-badge&logo=hackthebox" alt="HackIndia Vibe Coding 2026"/>
-  <h1>📞 Dial2AI</h1>
-  <p><strong>Bridging the digital divide for 350+ Million Indians using AI over Phone Calls.</strong></p>
-  <p><i>No Internet. No Smartphones. Just a Phone Call.</i></p>
+<img width="4320" height="1440" alt="HackHazards 2026 Banner" src="https://github.com/user-attachments/assets/c698b2cd-da84-4cb0-9276-125c6a7244aa" />
 
-  <h3><a href="https://drive.google.com/drive/folders/1_pD-kuckdEVDaM24y9SJjNETX6VK9By1">▶️ Watch the short Live Demo Video Here</a></h3>
-</div>
+# 🚀 Dial2AI
 
----
-
-## 🚀 The Problem & The Vision 
-
-Artificial Intelligence is transforming lives, but its benefits are still limited to people with smartphones, reliable internet, and digital literacy, leaving millions without access.
-
-### The Staggering Reality in India (2026):
-* 📉 **350+ Million** people still use basic keypad (feature) phones.
-* 🚫 **Nearly 50%** of the rural population lacks reliable internet access or digital literacy.
-* 🚜 **Farmers, workers, senior citizens, and students often lack access to reliable, real-time information, making them dependent on middlemen and vulnerable to misinformation, financial loss, and missed opportunities.**
-
-## Our Vision
-
-If every citizen can make a phone call, every citizen should be able to use AI.
-
-## **Dial2AI**
-
-integrates state-of-the-art Generative AI directly into legacy telecom networks. A user calls a exotel number from a simple feature phone, and our system streams their voice via WebSockets to our AI, injecting real-world agricultural and civic data into the conversation seamlessly.
+> **Making Generative AI Accessible Through a Phone Call.**
+>
+> **No Internet. No Smartphone. No App. Just a Phone Call. 📞🤖**
 
 ---
 
-## ⚔️ Competitive Analysis (Why we win)
+# 📌 Problem & Domain
 
-| Solution | The Problem | How Dial2AI is Better (Our USP) |
-|----------|-------------|---------------------------------|
-| **WhatsApp Bots / Web Apps** | Require smartphones, 4G internet, and typing literacy. Millions cannot use them. | **Zero Digital Literacy Required:** Works on a $10 Nokia feature phone via a standard GSM voice call. No internet needed. |
-| **Traditional IVR Systems** | "Press 1 for Weather, Press 2 for Prices." Extremely frustrating, rigid, and limited to hardcoded scripts. | **Natural Conversational AI:** No menus. The user just speaks naturally (*"Aaj mausam kaisa hai?"*) and the AI understands intent, fetches live data, and replies. |
-| **Kisan Call Centers (Human)** | Limited operating hours, massive wait times, and impossible to scale to 150M+ farmers. | **Infinite Scalability & 24/7 Availability:** AI handles thousands of concurrent calls instantly without taking breaks. |
-| **Google AI Edge Gallery** | Requires expensive modern smartphones capable of running heavy on-device (Edge) AI models. | **Hardware Agnostic:** Offloads all heavy AI compute to our cloud via telecom infrastructure, making the most advanced AI accessible on the cheapest phones. |
-| **Pocket Pal AI / App-based AI** | Requires the user to download an application, navigate a UI, and maintain an internet connection. | **Zero App Downloads:** No installation, no updates, no storage space required. It is as simple as dialing a phone number. |
+Generative AI is transforming every industry, but millions of people still cannot access it because they lack smartphones, stable internet connectivity, or the digital literacy required to use modern applications.
 
-## Why is this Unique ?
+Farmers, senior citizens, daily wage workers, students, and people living in rural areas often rely only on a basic mobile phone. Traditional IVR systems are limited to predefined menu options and cannot understand natural language conversations.
 
-**Our Ultimate USP:** Dial2AI transforms any basic phone into an AI assistant. Users simply call a exotel number, ask questions in their preferred language, and receive intelligent voice responses powered by Generative AI and real-time data—without needing internet, an app, or a smartphone.
+**Dial2AI bridges this digital divide by enabling anyone to interact with an AI assistant through a simple phone call.**
+
+A user simply dials a phone number, asks a question naturally, and receives an intelligent spoken response in **English, Hindi, or Hinglish**—without installing an app or using the internet.
 
 ---
 
-## ✨ Key Features (The Technical Magic)
+## 📌 Themes Selected
 
-We engineered Dial2AI to solve real human-computer interaction (HCI) problems over telecom:
-
-### 🤖 Multi-Domain AI Assistant
-The platform is capable of answering questions across a wide range of domains, including education, government schemes, farming, healthcare, technology, travel, jobs, finance, and general knowledge through a single voice interface.
-
----
-
-### 🧠 Conversational Memory
-The system remembers the ongoing conversation, allowing users to ask follow-up questions without repeating previous information.
-
----
-
-### 🚫 Barge-In Interruption
-The AI immediately stops speaking and listens whenever the user interrupts, enabling a natural and interactive conversation.
+- [x] Human Experience & Productivity
+- [ ] Climate & Sustainability Systems
+- [ ] HealthTech & Bio Platforms
+- [x] Learning & Knowledge Systems
+- [ ] Work, Finance & Digital Economy
+- [x] Infrastructure, Mobility & Smart Systems
+- [ ] Trust, Identity & Security
+- [ ] Media, Social & Interactive Platforms
+- [x] Public Systems, Governance and Civic Tech
+- [x] Developer Tools & Software Infrastructure
 
 ---
 
-### 🌍 Multilingual Voice Support
-The assistant automatically detects whether the user is speaking in English, Hindi, or Hinglish and responds in the same language for a seamless experience.
+# 🎯 Objective
+
+Dial2AI aims to democratize access to Generative AI by making it available through the world's most familiar interface—a phone call.
+
+### Target Users
+
+- 👨‍🌾 Farmers
+- 👵 Senior Citizens
+- 👨‍🏭 Daily Wage Workers
+- 👨‍🎓 Students
+- 🌾 Rural Communities
+- 📱 People without Smartphones or Internet
+
+### Pain Points
+
+- No smartphone
+- Poor internet connectivity
+- Low digital literacy
+- Traditional IVR systems are rigid and menu-driven
+- AI remains inaccessible to a large population
+
+### Our Solution
+
+Dial2AI converts a regular phone call into a natural conversation with an AI assistant capable of:
+
+- Answering open-ended questions
+- Providing live weather/news information
+- Understanding follow-up questions
+- Speaking multiple languages
+- Personalizing future conversations
 
 ---
 
-### 🎯 Live API Data Integration
-The system fetches live weather and news data from APIs, ensuring accurate and up-to-date information.
+# 🧠 Team & Approach
+
+## Team Name
+
+`Git Push Pray`
+
+## Team Members
+
+- **Prabhav Agrawal** — Backend, AI Pipeline, Voice Processing
+- **Rudrakshi Agarwal** — Dashboard, Frontend, System Design
 
 ---
 
-### 🎙️ Smart Silence Detection
-The assistant automatically detects when the user has finished speaking and instantly begins processing the request for a faster, more natural conversation.
+## Our Approach
+
+Instead of creating another AI application, we focused on eliminating the biggest barrier—**the need for a smartphone.**
+
+We designed Dial2AI around something nearly everyone already understands:
+
+📞 **A Phone Call**
+
+Major engineering challenges included:
+
+- Real-time bidirectional audio streaming
+- Maintaining low latency
+- Noise suppression
+- Smart silence detection
+- Barge-in interruption
+- Hinglish understanding
+- Conversational memory
+
+Using asynchronous WebSockets, AI inference, and graph-based memory, we created a natural voice-first AI experience.
 
 ---
 
-### 🎵 Dynamic Music Hold
-The system plays hold music while the AI prepares a response and stops it instantly when the answer is ready, ensuring a smooth experience.
+# 🛠️ Tech Stack
+
+## Core Technologies Used
+
+### Frontend
+
+- Next.js
+- React
+- TailwindCSS
+- Recharts
+- Lucide Icons
+
+Frontend Deployment
+
+➡️ **https://dial2-ai.vercel.app/**
 
 ---
 
-### 🤫 Intelligent Noise Gating
-The system filters background noise and telecom disturbances, ensuring only the user's speech is processed for better accuracy and conversation quality.
+### Backend
+
+- Python
+- FastAPI
+- Uvicorn
+- WebSockets
+- HTTPX
+- Pydantic
+- FFmpeg
+
+Backend Deployment
+
+☁️ **Render**
 
 ---
 
-### 📝 Automatic Conversation Transcript & SMS Follow-Up
-Every call is automatically converted into a text transcript and displayed in the backend terminal, which can be used to generate and send personalized SMS summaries to users after the call.
+### Database
+
+- SQLite
+- **Neo4j AuraDB**
 
 ---
 
-### 📊 Dashboard Analytics
-The dashboard provides call insights, identifies the user's intent, analyzes whether the conversation was positive, neutral, or negative, and helps monitor overall interaction patterns.
+### AI
+
+- Grok STT
+- Grok 4.1 Fast
+- Google Text-to-Speech
+- gTTS
 
 ---
 
-### 📂 Shareable Call Logs
-Conversation transcripts and call records can be securely stored and easily shared for future reference, reporting, and support.
+### Telephony
+
+- Exotel
+- Passthru Applets
 
 ---
 
-## 🔄 The User Workflow
+### Dashboard
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant Exotel
-    participant Dial2AI
-    participant APIs
-
-    User->>Exotel: Dials number
-    Exotel->>Dial2AI: Opens audio stream
-    Dial2AI->>User: "Namaste! How can I help?"
-    
-    User->>Dial2AI: Asks question
-    
-    rect rgb(30, 40, 60)
-    Note right of Dial2AI: ⚡ AI Processing Phase
-    Dial2AI-->>User: 🎵 Plays hold music
-    Dial2AI->>APIs: Fetches live data
-    APIs-->>Dial2AI: Returns data
-    end
-
-    Dial2AI->>User: 🗣️ Speaks AI response
-    User->>Exotel: Hangs up call
-    
-    rect rgb(40, 30, 50)
-    Note over Dial2AI: 📊 Post-Call Actions
-    Dial2AI-->>Dial2AI: Logs to dashboard
-    Dial2AI-->>User: ✉️ Sends SMS summary
-    end
-```
-*(Legend: Solid lines = User/System actions | Dotted lines = Background/Async events)*
-
----
-## 🛠️ Tech Stack & Libraries
-| **Category** | **Purpose** | **Technologies Used** |
-|--------------|-------------|------------------------|
-| ⚙️ **Hosting & Management** | Platform App Engine & DB Orchestration | **Base44 Platform** |
-| 🧠 **AI & Intelligence** | Speech-to-Text, Reasoning & Analytics | Grok STT, Grok 4.1 Fast, `openai` SDK (xAI), Neo4j AuraDB Graph |
-| 🔊 **Voice Processing** | Text-to-Speech | Google TTS (`gTTS`), `FFmpeg` |
-| ⚙️ **Backend & APIs** | Server & API Handling | Python 3.12, `FastAPI`, `uvicorn`, `httpx`, `pydantic` |
-| 🔄 **Real-Time Communication** | Audio Streaming | `websockets` |
-| 🗄️ **Database** | Data & Conversation Storage | `sqlite3`, Neo4j Graph DB |
-| 📞 **Telephony** | Calling & SMS Services | Exotel (Passthru Applets) |
-| 💻 **Frontend** | User Interface | `Next.js 14`, `React`, `TailwindCSS` (Base44 Orchestrated) |
-| 📊 **Analytics & Visualization** | Dashboard Charts | `Recharts` |
-| 🎨 **Icons & UI Components** | Icons & UI Elements | `Lucide-React` |
----
-
-## 🏗️ System Architecture
-
-We built a highly scalable, async event-driven architecture using Python FastAPI, Next.js, and WebSockets, fully integrated with and managed by the **Base44 Platform**.
-
-```mermaid
-graph TD
-    A["User (Feature Phone)"] -->|"Makes Phone Call"| B["Exotel Telecom Cloud"]
-    B -->|"WebSocket Audio Stream"| C{"FastAPI Backend"}
-    C -->|"Custom Noise Gate"| D["Grok STT"]
-    D -->|"Transcribed Hindi Text"| E{"Intent Classifier API"}
-    E -->|"Weather Intent"| F["OpenWeather API"]
-    E -->|"Mandi Intent"| G["Data.gov.in API"]
-    E -->|"Scheme Intent"| H["Local Schemes DB"]
-    F --> I["Dial2AI LLM"]
-    G --> I
-    H --> I
-    I -->|"Generates Response"| J["Google TTS"]
-    J -->|"PCM Audio Chunk"| B
-    B -->|"Plays Audio"| A
-    C -->|"Post-Call Analysis"| K[("SQLite Database / Neo4j Graph")]
-    C -->|"Sends Summary"| L["Exotel SMS API"]
-    L --> A
-    K --> M["Base44 Dial2AI Console (Next.js)"]
-    M -->|"CRUD Configuration Updates"| C
-```
-
-
-## 🚧 Challenges We Ran Into (And How We Solved Them)
-
-Building high-speed Generative AI over legacy telecom networks is incredibly difficult. Here is how we engineered our way out of the hardest HCI and networking problems:
-
-### 1. Real-Time Voice Streaming
-**Challenge:** Building a natural two-way AI conversation over a phone call with minimal delay.  
-**Solution:** We used a WebSocket-based streaming pipeline to process and exchange audio in real time.
+- **Base44**
 
 ---
 
-### 2. Latency & Dead Air
-**Challenge:** Users may think the call has dropped while waiting for the AI response.  
-**Solution:** We asynchronously stream an `interval.mp3` hold audio while the LLM generates its reply.
+### Hosting
+
+- Vercel (Frontend)
+- Render (Backend)
 
 ---
 
-### 3. Live API Integration
-**Challenge:** Fetching reliable real-time data from multiple external APIs.  
-**Solution:** We built a modular backend that validates API responses and injects live data into the AI prompt.
+## Additional Technologies Used
+
+- [x] AI / ML
+- [ ] Web3 / Blockchain
+- [ ] Cyber Security
+- [x] Cloud
 
 ---
 
-### 4. Telecom Static Problem
-**Challenge:** Phone-line noise caused the STT model to hallucinate speech.  
-**Solution:** We implemented a custom amplitude gate (`get_avg_amplitude`) to filter low-level noise before transcription.
+# 🏆 Sponsored Track
+
+## ✅ Neo4j Track
+
+We use **Neo4j AuraDB** as our graph database to maintain conversational memory.
+
+AuraDB stores relationships between:
+
+- Callers
+- Previous conversations
+- Interests
+- Topics
+- Locations
+
+This enables personalized responses for returning users.
 
 ---
 
-### 5. Echo Barge-in Challenge
-**Challenge:** STT sometimes transcribed the AI's own voice as user speech.  
-**Solution:** We used `playback_start_time` and echo-guard windows to ignore AI playback.
+## ✅ Base44 Track
+
+We built our operational dashboard using **Base44**.
+
+It provides:
+
+- Call analytics
+- Conversation history
+- Intent detection
+- Sentiment analysis
+- Dashboard management
+- Backend configuration
+
+This accelerated dashboard development, allowing us to focus on building the real-time AI pipeline.
 
 ---
 
-## 💼 Business Model
+## ✅ Render
 
-- **🏢 B2B:** AI voice assistant solutions for businesses through SaaS, licensing, and API integrations.
-- **🏛️ B2G:** Partnerships with government agencies to provide AI-powered citizen services and information.
-
----
-
-## 📈 Scalability
-
-- 🌍 Supports multi-language and nationwide deployment.
-- 🔗 Easily integrates new APIs and AI services.
-- 📞 Built to serve millions of users through existing telecom networks.
-
-## 🗺️ Future Improvements 
-
-Our foundation is built. Here is how we scale to millions of users:
-* 📞 **Missed Call Flow:** Users simply give a missed call and receive an automatic callback, making AI accessible without internet or a cellular data connection. Since placing a missed call does not require an active recharge, users can access the service even without a phone plan.
-- 📍 **Auto-Location Detection:** Detect caller location securely to provide accurate weather and Mandi prices.
-- 💬 **Bi-Directional SMS:** Users can send SMS queries and receive AI-generated replies without calling.
-- 🔗 **Expanded API Ecosystem:** Integrate Agmarknet, IMD, railway, healthcare, and government datasets.
-- 🗣️ **More Languages:** Add support for more regional and international languages.
+Our FastAPI backend is deployed on **Render**, providing reliable cloud hosting for our real-time AI voice pipeline.
 
 ---
 
+# ✨ Key Features
 
-## 📁 Project Structure
+- ✅ AI conversations through a simple phone call
+- ✅ Works without smartphone or internet
+- ✅ English, Hindi & Hinglish support
+- ✅ Conversational memory using Neo4j AuraDB
+- ✅ Live weather, news and public information
+- ✅ Real-time speech-to-text
+- ✅ AI-generated spoken responses
+- ✅ Barge-in interruption support
+- ✅ Smart silence detection
+- ✅ Noise gate for telecom static
+- ✅ Hold music during AI processing
+- ✅ Dashboard with analytics and transcripts
+- ✅ SMS summary generation
+- ✅ Real-time WebSocket streaming
 
-```text
-dial2ai/
-├── backend/
-│   ├── app/
-│   │   ├── routes/          # FastAPI WebSockets and REST endpoints
-│   │   ├── services/        # Exotel integration, Grok API, TTS logic
-│   │   └── database/        # SQLite setup and CRM logging
-│   ├── .env.example         # Environment variables template
-│   └── requirements.txt     # Python dependencies
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React/Recharts UI components
-│   │   ├── pages/           # Next.js CRM routes
-│   │   └── styles/          # TailwindCSS globals
-│   └── package.json         # Node dependencies
-├── AI_WORKFLOW.md           # Our exact prompt-driven Vibe Coding methodology
-├── PITCH.md                 # 3-minute hackathon presentation script
-└── Readme.md                # You are here
-```
+---
 
-## 🔧 Setup & Installation
+# 📽️ Demo & Deliverables
 
-To run Dial2AI locally for development or evaluation:
+### 🎥 Demo Video
 
-### 1. Prerequisites
-- Python 3.12+
-- Node.js 18+
-- An [Exotel](https://exotel.com/) Account (for SIP/WebSockets)
-- xAI Grok API Key
+Coming Soon
 
-### 2. Environment Variables
-Create a `.env` file in the `backend/` directory:
+---
+
+### 🌐 Frontend Deployment
+
+https://dial2-ai.vercel.app/
+
+---
+
+### ⚙️ Backend
+
+Hosted on **Render**
+
+---
+
+### 📑 Pitch Deck
+
+Coming Soon
+
+---
+
+# ✅ Tasks & Bonus Checklist
+
+- [ ] All team members completed the mandatory social task
+- [ ] Bonus Task 1 – Badge sharing
+- [x] Bonus Task 2 – Blog/Article
+
+---
+
+# 🧪 How to Run the Project
+
+## Requirements
+
+- Python 3.11+
+- Node.js 20+
+- FFmpeg
+- Exotel Account
+- Grok API Key
+- Weather API
+- News API
+- Neo4j AuraDB Instance
+
+---
+
+## Environment Variables
+
 ```env
-EXOTEL_SID=your_exotel_sid
-EXOTEL_TOKEN=your_exotel_token
-EXOTEL_APP_ID=your_passthru_applet_id
-XAI_API_KEY=your_xai_api_key
-WEATHER_API_KEY=your_openweather_key
+GROK_API_KEY=
+EXOTEL_API_KEY=
+EXOTEL_API_TOKEN=
+EXOTEL_SID=
+NEO4J_URI=
+NEO4J_USERNAME=
+NEO4J_PASSWORD=
+WEATHER_API_KEY=
+NEWS_API_KEY=
 ```
 
-### 3. Run the Backend (FastAPI)
+---
+
+## Local Setup
+
+### Clone Repository
+
+```bash
+git clone https://github.com/yourusername/Dial2AI.git
+
+cd Dial2AI
+```
+
+### Backend
+
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+uvicorn app.main:app --reload
 ```
 
-### 4. Run the Frontend Dashboard (Next.js)
+### Frontend
+
 ```bash
 cd frontend
+
 npm install
+
 npm run dev
 ```
-The CRM dashboard will be available at `http://localhost:3000`.
 
 ---
 
-## 📞 API Reference (Lightweight)
+# 🧬 Future Scope
 
-Dial2AI exposes enterprise-ready endpoints for seamless B2B integration:
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `wss://yourdomain.com/stream` | `WS` | Primary WebSocket endpoint for Exotel's Passthru Applet to stream 8kHz PCM audio. |
-| `/api/leads` | `GET` | Returns JSON payload of extracted call intents and caller phone numbers for the CRM. |
-| `/api/sms/webhook` | `POST` | Incoming webhook to parse bi-directional SMS queries from offline users. |
+- 🌍 Support for more Indian regional languages
+- 📞 Missed-call callback system
+- 📍 Location-aware weather updates
+- 🌾 Agmarknet & Mandi price integration
+- 🚆 Railway APIs
+- 🏥 Healthcare integrations
+- 🏛 Government scheme recommendations
+- 💬 Two-way SMS conversations
+- 🧠 Smarter personalization using Neo4j graphs
+- 📈 Advanced analytics dashboard
 
 ---
 
-<div align="center">
-  <i>Built with ❤️ by Team Git Push Pray for HackIndia 2026.</i><br/>
-  <b>Team:</b> Rudrakshi Agarwal • Prabhav Agrawal• Sagar Jain• Niyati Suman<br/>
-  <i>Licensed under the MIT License.</i>
-</div>
+# 📎 Resources / Credits
+
+### APIs
+
+- Exotel
+- Grok API
+- Google Text-to-Speech
+- Weather APIs
+- News APIs
+
+### Technologies
+
+- FastAPI
+- Next.js
+- Neo4j AuraDB
+- Base44
+- Render
+- SQLite
+- React
+- TailwindCSS
+- Recharts
+
+---
+
+# 🏁 Final Words
+
+Dial2AI was built with a simple belief:
+
+> **Artificial Intelligence should not be limited to people with smartphones.**
+
+If someone can make a phone call, they should be able to access AI.
+
+By combining **real-time telephony**, **Generative AI**, **Neo4j AuraDB**, **Base44**, and **Render**, we transformed an ordinary phone call into an intelligent conversation.
+
+📞 **No Internet.**
+
+📱 **No Smartphone.**
+
+🤖 **Just Dial. Just Ask.**
+
+---
+
+## ❤️ Built with passion at HackHazards'26
+
+**Team Git Push Pray**
