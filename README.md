@@ -263,7 +263,7 @@ Hosted on **Render**
 
 ### 📑 Pitch Deck
 
-Coming Soon
+https://drive.google.com/file/d/1t4qTTzUV5kjMetsWccck63pe4EAMxk9S/view?usp=sharing
 
 ---
 
