@@ -245,7 +245,7 @@ Our FastAPI backend is deployed on **Render**, providing reliable cloud hosting 
 
 ### 🎥 Demo Video
 
-Coming Soon
+https://drive.google.com/drive/folders/1NwSa81mm9pUgyCtqEtJeN057CdyOz4Xk
 
 ---
 
