@@ -266,6 +266,17 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # Negotiate sample rate (default to 8000 Hz for Exotel streams)
     sample_rate_str = query_params.get("sample-rate") or query_params.get("sample_rate") or query_params.get("sampleRate")
+    
+    # Fallback to handle typos like ?sample-rate-16000 (key-only parameters)
+    if not sample_rate_str:
+        for key in query_params.keys():
+            if "16000" in key:
+                sample_rate_str = "16000"
+                break
+            elif "8000" in key:
+                sample_rate_str = "8000"
+                break
+
     sample_rate = int(sample_rate_str) if (sample_rate_str and sample_rate_str.isdigit()) else 8000
     bytes_per_sec = sample_rate * 2.0
     print(f"Negotiated sample rate: {sample_rate} Hz ({bytes_per_sec} bytes/sec)")
