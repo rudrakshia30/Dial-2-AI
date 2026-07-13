@@ -274,8 +274,15 @@ https://drive.google.com/file/d/1t4qTTzUV5kjMetsWccck63pe4EAMxk9S/view?usp=shari
 - [x] Bonus Task 2 – Blog/Article
 
 ---
+# How to test Dial-2-AI
 
-# 🧪 How to Run the Project
+To test the system you only need to call on number : 
+
+**0141 494 0815**
+
+and you are all set to ask your questions
+
+# 🧪 How to Run the Project locally
 
 ## Requirements
 
