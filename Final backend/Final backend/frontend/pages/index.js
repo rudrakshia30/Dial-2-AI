@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Sidebar from '../components/Sidebar';
 import StatCard from '../components/StatCard';
 import CallTable from '../components/CallTable';
+import LiveCallFeed from '../components/LiveCallFeed';
 import LandingExperience from '../components/LandingExperience';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
 import { apiFetch } from '../lib/api';
@@ -387,19 +388,9 @@ export default function Dashboard() {
                   </div>
                 </FadeIn>
 
-                {/* Recent Calls */}
+                {/* Live Call Feed */}
                 <FadeIn delay={720} className="xl:col-span-2">
-                  <div className="glass-card p-6">
-                    <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                      Recent Calls
-                    </h2>
-                    {calls.length > 0 ? (
-                      <CallTable calls={calls.slice(0, 5)} />
-                    ) : (
-                      <p className="text-gray-500 text-sm text-center py-8">No calls recorded yet</p>
-                    )}
-                  </div>
+                  <LiveCallFeed calls={calls} pollInterval={10000} />
                 </FadeIn>
               </div>
             </>
